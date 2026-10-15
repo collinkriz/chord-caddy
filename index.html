@@ -111,6 +111,33 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
   border:1px solid var(--edge); border-radius:5px; color:var(--bone);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem;
   white-space:pre-wrap; overflow-x:auto}
+.tabwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:.5rem 0 .4rem;
+  border:1px solid var(--edge); border-radius:5px; background:var(--case-2); padding:.4rem}
+.tabgrid{display:grid; grid-template-columns:1.3rem repeat(var(--cols),2rem); gap:2px}
+.tstr{display:flex; align-items:center; justify-content:center; font-size:.78rem;
+  color:var(--nickel); font-family:ui-monospace,Menlo,monospace}
+.tcell{height:2rem; border:1px solid var(--edge); border-radius:3px; background:var(--raise);
+  color:var(--faint); font-size:.85rem; font-family:ui-monospace,Menlo,monospace; padding:0}
+.tcell.has{color:var(--bone); border-color:var(--nickel); font-weight:600}
+.tcell.on{border-color:var(--brass); background:#2A3A31; color:var(--brass)}
+.tabtools{display:flex; gap:.4rem; margin-bottom:.4rem}
+.tabtools button{min-height:40px; padding:0 .75rem; font-size:.84rem; color:var(--nickel);
+  border:1px dashed var(--edge); border-radius:5px}
+.numpad{display:flex; flex-wrap:wrap; gap:.3rem; margin:.1rem 0 .6rem}
+.numpad button{min-width:2.6rem; min-height:42px; border:1px solid var(--edge);
+  border-radius:5px; background:var(--raise); color:var(--bone); font-size:.95rem}
+.numpad button.done{color:var(--brass); border-color:var(--brass); margin-left:auto}
+.tabout{font-size:.76rem; line-height:1.35; letter-spacing:.02em}
+
+.scalebox{border:1px solid var(--edge); border-radius:5px; background:var(--raise);
+  padding:.7rem .75rem; margin:0 0 1rem}
+.scalehead{display:flex; width:100%; align-items:baseline; gap:.6rem; min-height:40px}
+.scalehead b{font-family:"Barlow Condensed",Barlow,sans-serif; font-size:1.25rem;
+  font-weight:600; letter-spacing:.03em; color:var(--bone)}
+.scalehead i{margin-left:auto; font-style:normal; font-size:.84rem; color:var(--brass)}
+.scalebox .seg{margin:.6rem 0 .3rem; flex-wrap:wrap}
+.scalebox .sub{margin:.3rem 0 .6rem}
+.scalebox .why{margin:.5rem 0 0; font-size:.86rem; color:var(--nickel); line-height:1.45}
 .syncbar{display:flex; align-items:center; gap:.6rem; margin:0 0 1.1rem;
   padding:.5rem .7rem; border:1px solid var(--edge); border-radius:5px;
   background:var(--raise); font-size:.86rem; color:var(--nickel)}
@@ -980,7 +1007,8 @@ const S={
   scales:{root:9, scale:'major', maxFret:15, degrees:false, flat:null},
   keys:  {root:9, scale:'major', tab:'chords', sevenths:false, flat:null},
   find:  {mode:'chords', chords:[], notes:[], root:0, flat:null},
-  songs: {list:[], openId:null, editing:false, addTo:null, root:0, flat:null, deleted:{}}
+  songs: {list:[], openId:null, editing:false, addTo:null, root:0, flat:null, deleted:{},
+          tsel:null, scaleOpen:false, scalePick:null}
 };
 const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find','Find'],['songs','Songs']];
 
@@ -1006,6 +1034,24 @@ function loadSongs(){
 const uid=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const SECTION_KINDS=['Intro','Verse','Pre-chorus','Chorus','Bridge','Solo','Outro'];
 function newSection(kind){ return {id:uid(), kind:kind||'Verse', chords:[], text:''}; }
+const TAB_STRINGS=['e','B','G','D','A','E'];   // high to low, as tab is written
+function newTab(cols){
+  return {cols:cols||16, cells:Array.from({length:6},()=>Array(cols||16).fill(''))};
+}
+function tabCell(t,r,c){ return (t.cells[r]&&t.cells[r][c])||''; }
+/* Render as real tab so it reads the way it would on paper. */
+function asciiTab(t){
+  const w=2;
+  return TAB_STRINGS.map((name,r)=>{
+    let line=name+'|';
+    for(let c=0;c<t.cols;c++){
+      const v=tabCell(t,r,c);
+      line += '-' + (v ? v.padEnd(w,'-') : '--');
+    }
+    return line+'-|';
+  }).join('\n');
+}
+function tabIsEmpty(t){ return !t || !t.cells.some(row=>row.some(v=>v)); }
 function newSong(){
   return {id:uid(), name:'Untitled', updated:Date.now(),
           sections:[newSection('Intro'),newSection('Verse'),newSection('Chorus')]};
@@ -1266,6 +1312,34 @@ function render(){
   bind('[data-scyc]', b=>{ const g=openSong(); touchSong(g); const sec=g&&g.sections.find(x=>x.id===b.dataset.scyc);
     if(sec){ const c=sec.chords[+b.dataset.i];
       c.type=QCYCLE[(QCYCLE.indexOf(c.type)+1)%QCYCLE.length]; saveSongs(); } });
+  bind('[data-scaletoggle]', ()=>{ S.songs.scaleOpen=!S.songs.scaleOpen; });
+  bind('[data-scalepick]', b=>{ S.songs.scalePick=+b.dataset.scalepick; S.songs.scaleOpen=true; });
+  bind('[data-tabnew]', b=>{ const g=openSong(); touchSong(g);
+    const sec=g&&g.sections.find(x=>x.id===b.dataset.tabnew);
+    if(sec){ sec.tab=newTab(16); saveSongs(); } });
+  bind('[data-tabdel]', b=>{ const g=openSong(); touchSong(g);
+    const sec=g&&g.sections.find(x=>x.id===b.dataset.tabdel);
+    if(sec){ sec.tab=null; S.songs.tsel=null; saveSongs(); } });
+  bind('[data-tabcols]', b=>{ const g=openSong(); touchSong(g);
+    const sec=g&&g.sections.find(x=>x.id===b.dataset.tabcols);
+    if(sec&&sec.tab){ sec.tab.cols+=8;
+      sec.tab.cells.forEach(row=>{ while(row.length<sec.tab.cols) row.push(''); });
+      saveSongs(); } });
+  bind('[data-tcell]', b=>{ S.songs.tsel = S.songs.tsel===b.dataset.tcell ? null : b.dataset.tcell; });
+  bind('[data-tset]', b=>{
+    const sel=S.songs.tsel; if(!sel) return;
+    const v=b.dataset.tset;
+    if(v==='done'){ S.songs.tsel=null; return; }
+    const [sid,r,c]=sel.split(':');
+    const g=openSong(); touchSong(g);
+    const sec=g&&g.sections.find(x=>x.id===sid);
+    if(sec&&sec.tab){
+      sec.tab.cells[+r][+c]=v;
+      const next=+c+1;                      // step along so you can keep tapping
+      S.songs.tsel = next<sec.tab.cols ? sid+':'+r+':'+next : null;
+      saveSongs();
+    }
+  });
   bind('[data-sdelch]', b=>{ const g=openSong(); touchSong(g); const sec=g&&g.sections.find(x=>x.id===b.dataset.sdelch);
     if(sec){ sec.chords.splice(+b.dataset.i,1); saveSongs(); } });
   stage.querySelectorAll('[data-sync]').forEach(b=>b.addEventListener('click',()=>syncNow()));
@@ -1600,20 +1674,92 @@ function renderSongs(){
       } else {
         h+=`<button class="addch" data-sopen="${sec.id}">+ chord</button>`;
       }
+      h+= sec.tab ? tabEditor(sec) : `<button class="addch" data-tabnew="${sec.id}">+ tab</button>`;
       h+=`<textarea class="sriff" data-stext="${sec.id}" rows="2"
-            placeholder="riff, tab, lyric cue…">${esc(sec.text||'')}</textarea>`;
-    } else if(sec.text){
-      h+=`<pre class="riffout">${esc(sec.text)}</pre>`;
+            placeholder="notes, lyric cue…">${esc(sec.text||'')}</textarea>`;
+    } else {
+      if(sec.tab && !tabIsEmpty(sec.tab)) h+=`<pre class="riffout tabout">${esc(asciiTab(sec.tab))}</pre>`;
+      if(sec.text) h+=`<pre class="riffout">${esc(sec.text)}</pre>`;
     }
     h+=`</div>`;
   });
 
   if(ed) h+=`<button class="addsec" data-saddsec="1">+ add section</button>`;
+  if(k) h+=songScales(k);
   h+=`<p class="note">${ed
       ? 'Arrows reorder a section, × deletes it, and tapping the section name cycles Intro → Verse → Chorus and so on. Everything saves as you type.'
       : 'Tap any chord to see its shapes. Hit Edit to change the arrangement.'}</p>`;
   stage.innerHTML=h;
   bindSongInputs();
+}
+
+/* A 6-string grid. Tapping a cell opens a number pad rather than the
+   system keyboard -- far less painful with a guitar in your lap. */
+function tabEditor(sec){
+  const t=sec.tab, sel=S.songs.tsel||'';
+  let h=`<div class="tabwrap"><div class="tabgrid" style="--cols:${t.cols}">`;
+  for(let r=0;r<6;r++){
+    h+=`<span class="tstr">${TAB_STRINGS[r]}</span>`;
+    for(let c=0;c<t.cols;c++){
+      const key=sec.id+':'+r+':'+c, v=tabCell(t,r,c);
+      h+=`<button class="tcell${sel===key?' on':''}${v?' has':''}" data-tcell="${key}">${v||'·'}</button>`;
+    }
+  }
+  h+=`</div></div>`;
+  h+=`<div class="tabtools">
+        <button data-tabcols="${sec.id}">+ 8 beats</button>
+        <button data-tabdel="${sec.id}">Remove tab</button>
+      </div>`;
+  if(sel.split(':')[0]===sec.id){
+    h+=`<div class="numpad">`;
+    for(let n=0;n<=12;n++) h+=`<button data-tset="${n}">${n}</button>`;
+    h+=`<button data-tset="x">×</button><button data-tset="">clear</button>`;
+    h+=`<button class="done" data-tset="done">done</button></div>`;
+  } else {
+    h+=`<p class="hint">Tap a dot to put a fret number on that string.</p>`;
+  }
+  return h;
+}
+
+/* What you can actually solo over this song, rooted correctly.
+   Over A major that means A major, A major pentatonic, F# minor pentatonic
+   and A blues -- which are four different-sounding options, not one. */
+function scaleOptions(k){
+  const minorish=MINORISH.includes(k.scale);
+  const out=[{root:k.root, scale:k.scale, label:'The key'}];
+  if(minorish){
+    out.push({root:k.root, scale:'minor pentatonic', label:'Minor pent'});
+    out.push({root:pc(k.root+3), scale:'major pentatonic', label:'Relative major pent'});
+  } else {
+    out.push({root:k.root, scale:'major pentatonic', label:'Major pent'});
+    out.push({root:pc(k.root+9), scale:'minor pentatonic', label:'Relative minor pent'});
+  }
+  out.push({root:k.root, scale:'blues', label:'Blues'});
+  return out;
+}
+function songScales(k){
+  const open=S.songs.scaleOpen;
+  const opts=scaleOptions(k);
+  const i=Math.min(S.songs.scalePick||0, opts.length-1);
+  let h=`<div class="scalebox">
+    <button class="scalehead" data-scaletoggle="1" aria-expanded="${open}">
+      <b>Scales over ${keyName(k.root,k.scale)} ${SCALES[k.scale].label}</b>
+      <i>${open?'hide':'show'}</i>
+    </button>`;
+  if(open){
+    const o=opts[i];
+    h+=`<div class="seg">`;
+    opts.forEach((x,j)=>{ h+=`<button data-scalepick="${j}" aria-pressed="${j===i}">${x.label}</button>`; });
+    h+=`</div>`;
+    const sc=SCALES[o.scale];
+    useFlats = FLATKEYS.includes(o.root);
+    h+=`<p class="sub">${keyName(o.root,o.scale)} ${sc.label} &nbsp;·&nbsp;
+        <b>${sc.ivs.map(iv=>nn(o.root+iv)).join('  ')}</b></p>`;
+    h+=`<div class="mapwrap">${fretboardSVG(o.root, sc.ivs, false, 15)}</div>`;
+    h+=`<p class="why">Gold is the root. Tap through the options — they fit the same
+        chords but land on different notes, so they do not sound alike.</p>`;
+  }
+  return h+`</div>`;
 }
 
 function renderSongList(){
