@@ -135,6 +135,15 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
 .scalehead b{font-family:"Barlow Condensed",Barlow,sans-serif; font-size:1.25rem;
   font-weight:600; letter-spacing:.03em; color:var(--bone)}
 .scalehead i{margin-left:auto; font-style:normal; font-size:.84rem; color:var(--brass)}
+.scalesel{display:block; width:100%; margin:.6rem 0 .2rem; min-height:44px;
+  background:var(--case-2); color:var(--bone); border:1px solid var(--edge);
+  border-radius:5px; padding:.5rem .7rem; font:inherit; font-size:.92rem;
+  -webkit-appearance:none; appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--brass) 50%),
+                   linear-gradient(135deg,var(--brass) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+  background-size:6px 6px, 6px 6px; background-repeat:no-repeat; padding-right:2.4rem}
+.scalesel:focus{outline:none; border-color:var(--brass)}
 .scalebox .seg{margin:.6rem 0 .3rem; flex-wrap:wrap}
 .scalebox .sub{margin:.3rem 0 .6rem}
 .scalebox .why{margin:.5rem 0 0; font-size:.86rem; color:var(--nickel); line-height:1.45}
@@ -824,7 +833,7 @@ function chordSVG(v, rootPc){
   return s+'</svg>';
 }
 
-function fretboardSVG(rootPc, ivs, showDegrees, maxFret){
+function fretboardSVG(rootPc, ivs, showDegrees, maxFret, spell){
   const FR=maxFret||15, L=38, T=16, W=L+FR*38+16, rowH=26, H=T+5*rowH+30;
   const fw=(W-L-16)/FR;
   const set=ivs.map(i=>pc(rootPc+i));
@@ -854,7 +863,7 @@ function fretboardSVG(rootPc, ivs, showDegrees, maxFret){
       if(!set.includes(p)) continue;
       const x=f===0?L-13:L+(f-0.5)*fw;
       const isRoot=p===rootPc;
-      const lbl=showDegrees?DEG[pc(p-rootPc)]:nn(p);
+      const lbl=showDegrees?DEG[pc(p-rootPc)]:((spell&&spell[p])||nn(p));
       s+=`<circle cx="${x}" cy="${y}" r="9.5" fill="${isRoot?'var(--brass)':'var(--raise)'}" stroke="${isRoot?'var(--brass)':'var(--bone)'}" stroke-width="1.1"/>`;
       s+=`<text x="${x}" y="${y+3.4}" font-size="9" font-weight="600" text-anchor="middle" fill="${isRoot?'#1B2621':'var(--bone)'}">${lbl}</text>`;
     }
@@ -1008,7 +1017,7 @@ const S={
   keys:  {root:9, scale:'major', tab:'chords', sevenths:false, flat:null},
   find:  {mode:'chords', chords:[], notes:[], root:0, flat:null},
   songs: {list:[], openId:null, editing:false, addTo:null, root:0, flat:null, deleted:{},
-          tsel:null, scaleOpen:false, scalePick:null}
+          tsel:null, scaleOpen:false, scalePick:1}
 };
 const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find','Find'],['songs','Songs']];
 
@@ -1238,6 +1247,36 @@ function chordSpelling(rootPc, type){
 }
 const spellAs=(map,p)=>map[pc(p)]||nn(p);
 
+/* Scales get the same treatment as chords: stack letters by degree, so F#
+   major reads F# G# A# B C# D# E# rather than a mix of sharps and flats.
+   The blues scale deliberately repeats a letter (A C D Eb E G) -- that is
+   correct, the b5 and the 5 are both some kind of E. */
+const SEVEN=[0,1,2,3,4,5,6];
+const SCALE_STEPS={
+  major:SEVEN, minor:SEVEN, dorian:SEVEN, phrygian:SEVEN, lydian:SEVEN,
+  mixolydian:SEVEN, locrian:SEVEN, 'harmonic minor':SEVEN, 'melodic minor':SEVEN,
+  'major pentatonic':[0,1,2,4,5], 'minor pentatonic':[0,2,3,4,6], blues:[0,2,3,4,4,6]
+};
+const ascii=t=>String(t).replace(/♯/g,'#').replace(/♭/g,'b');
+function scaleNotes(rootPc, scaleKey, rootName){
+  const ivs=SCALES[scaleKey].ivs, steps=SCALE_STEPS[scaleKey];
+  const li=LETTERS.indexOf(ascii(rootName||keyName(rootPc,scaleKey))[0]);
+  return ivs.map((iv,k)=>{
+    const target=pc(rootPc+iv);
+    if(li>=0 && steps && steps[k]!==undefined){
+      const l=(li+steps[k])%7;
+      const d=((target-LETTER_PC[l]+18)%12)-6;
+      if(d>=-1 && d<=1) return LETTERS[l]+(d===-1?'b':d===1?'#':'');
+    }
+    return SHARP[target];
+  });
+}
+function scaleSpellMap(rootPc, scaleKey, rootName){
+  const names=scaleNotes(rootPc,scaleKey,rootName), ivs=SCALES[scaleKey].ivs, map={};
+  ivs.forEach((iv,k)=>{ const p=pc(rootPc+iv); if(map[p]===undefined) map[p]=names[k]; });
+  return map;
+}
+
 // Chord names lean the way guitarists actually say them: C#m not Dbm,
 // but Bb7 not A#7. Key signatures are a different question, so the Keys
 // page keeps its own canonical spelling above.
@@ -1313,7 +1352,8 @@ function render(){
     if(sec){ const c=sec.chords[+b.dataset.i];
       c.type=QCYCLE[(QCYCLE.indexOf(c.type)+1)%QCYCLE.length]; saveSongs(); } });
   bind('[data-scaletoggle]', ()=>{ S.songs.scaleOpen=!S.songs.scaleOpen; });
-  bind('[data-scalepick]', b=>{ S.songs.scalePick=+b.dataset.scalepick; S.songs.scaleOpen=true; });
+  stage.querySelectorAll('[data-scalesel]').forEach(el=>el.addEventListener('change',()=>commit(()=>{
+    S.songs.scalePick=+el.value; S.songs.scaleOpen=true; })));
   bind('[data-tabnew]', b=>{ const g=openSong(); touchSong(g);
     const sec=g&&g.sections.find(x=>x.id===b.dataset.tabnew);
     if(sec){ sec.tab=newTab(16); saveSongs(); } });
@@ -1429,7 +1469,7 @@ function renderScale(){
     <p class="sub">${sc.ivs.length} notes &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
     ${seg(SCALE_SEG, c.degrees)}
     ${keyPicker(c, SCALE_MODES)}
-    <div class="mapwrap">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret)}</div>
+    <div class="mapwrap">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret, scaleSpellMap(c.root,c.scale))}</div>
     <p class="note">Scroll sideways for the rest of the neck. Gold is the root.
        Degrees show each note's number in the scale, which is what makes the shape
        portable to any key.</p>`;
@@ -1726,38 +1766,45 @@ function tabEditor(sec){
    and A blues -- which are four different-sounding options, not one. */
 function scaleOptions(k){
   const minorish=MINORISH.includes(k.scale);
-  const out=[{root:k.root, scale:k.scale, label:'The key'}];
+  const tonic=keyName(k.root,k.scale);
+  // name the relative root from the parent key's own spelling, so the
+  // relative minor of F# major is D# minor and never Eb minor
+  const deg=SCALES[k.scale].ivs.length===7 ? scaleNotes(k.root,k.scale) : null;
+  const relName = deg ? (minorish ? deg[2] : deg[5]) : null;
+  const out=[{root:k.root, scale:k.scale, label:'The key', name:tonic}];
   if(minorish){
-    out.push({root:k.root, scale:'minor pentatonic', label:'Minor pent'});
-    out.push({root:pc(k.root+3), scale:'major pentatonic', label:'Relative major pent'});
+    out.push({root:k.root, scale:'minor pentatonic', label:'Minor pent', name:tonic});
+    out.push({root:pc(k.root+3), scale:'major pentatonic', label:'Relative major pent', name:relName});
   } else {
-    out.push({root:k.root, scale:'major pentatonic', label:'Major pent'});
-    out.push({root:pc(k.root+9), scale:'minor pentatonic', label:'Relative minor pent'});
+    out.push({root:k.root, scale:'major pentatonic', label:'Major pent', name:tonic});
+    out.push({root:pc(k.root+9), scale:'minor pentatonic', label:'Relative minor pent', name:relName});
   }
-  out.push({root:k.root, scale:'blues', label:'Blues'});
+  out.push({root:k.root, scale:'blues', label:'Blues', name:tonic});
   return out;
 }
+// keyName gives D♯, scaleNotes gives D# -- make the dropdown consistent
+const pretty=t=>String(t).replace(/#/g,'\u266F').replace(/b/g,'\u266D');
+const optName=o=>pretty(o.name||keyName(o.root,o.scale));
 function songScales(k){
   const open=S.songs.scaleOpen;
   const opts=scaleOptions(k);
-  const i=Math.min(S.songs.scalePick||0, opts.length-1);
+  const i=Math.min(S.songs.scalePick==null?1:S.songs.scalePick, opts.length-1);
   let h=`<div class="scalebox">
     <button class="scalehead" data-scaletoggle="1" aria-expanded="${open}">
       <b>Scales over ${keyName(k.root,k.scale)} ${SCALES[k.scale].label}</b>
       <i>${open?'hide':'show'}</i>
     </button>`;
   if(open){
-    const o=opts[i];
-    h+=`<div class="seg">`;
-    opts.forEach((x,j)=>{ h+=`<button data-scalepick="${j}" aria-pressed="${j===i}">${x.label}</button>`; });
-    h+=`</div>`;
-    const sc=SCALES[o.scale];
-    useFlats = FLATKEYS.includes(o.root);
-    h+=`<p class="sub">${keyName(o.root,o.scale)} ${sc.label} &nbsp;·&nbsp;
-        <b>${sc.ivs.map(iv=>nn(o.root+iv)).join('  ')}</b></p>`;
-    h+=`<div class="mapwrap">${fretboardSVG(o.root, sc.ivs, false, 15)}</div>`;
-    h+=`<p class="why">Gold is the root. Tap through the options — they fit the same
-        chords but land on different notes, so they do not sound alike.</p>`;
+    const o=opts[i], sc=SCALES[o.scale];
+    h+=`<select class="scalesel" data-scalesel="1" aria-label="Which scale">`;
+    opts.forEach((x,j)=>{
+      h+=`<option value="${j}"${j===i?' selected':''}>${x.label} · ${keyName(x.root,x.scale)} ${SCALES[x.scale].label}</option>`;
+    });
+    h+=`</select>`;
+    h+=`<p class="sub"><b>${scaleNotes(o.root,o.scale,o.name).join('  ')}</b></p>`;
+    h+=`<div class="mapwrap">${fretboardSVG(o.root, sc.ivs, false, 15, scaleSpellMap(o.root,o.scale,o.name))}</div>`;
+    h+=`<p class="why">Gold is the root. The options fit the same chords but land on
+        different notes, so they do not sound alike.</p>`;
   }
   return h+`</div>`;
 }
