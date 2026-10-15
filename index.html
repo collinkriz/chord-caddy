@@ -146,6 +146,13 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
 .scalesel:focus{outline:none; border-color:var(--brass)}
 .scalebox .seg{margin:.6rem 0 .3rem; flex-wrap:wrap}
 .scalebox .sub{margin:.3rem 0 .6rem}
+.vibe{margin:.5rem 0 .6rem; font-size:.92rem; line-height:1.55; color:var(--bone)}
+.vibedl{margin:0 0 .8rem; display:grid; gap:.45rem}
+.vibedl div{display:grid; grid-template-columns:7.2rem 1fr; gap:.5rem; align-items:baseline}
+.vibedl dt{font-size:.76rem; letter-spacing:.06em; text-transform:uppercase; color:var(--brass)}
+.vibedl dd{margin:0; font-size:.88rem; line-height:1.45; color:var(--nickel)}
+@media(max-width:400px){.vibedl div{grid-template-columns:1fr; gap:.1rem}}
+.scalebox .vibe{margin:.55rem 0 .4rem}
 .scalebox .why{margin:.5rem 0 0; font-size:.86rem; color:var(--nickel); line-height:1.45}
 .syncbar{display:flex; align-items:center; gap:.6rem; margin:0 0 1.1rem;
   padding:.5rem .7rem; border:1px solid var(--edge); border-radius:5px;
@@ -384,7 +391,8 @@ const SCALES={
   'melodic minor':{ivs:[0,2,3,5,7,9,11],label:'melodic minor'},
   'major pentatonic':{ivs:[0,2,4,7,9],label:'major pentatonic'},
   'minor pentatonic':{ivs:[0,3,5,7,10],label:'minor pentatonic'},
-  'blues':{ivs:[0,3,5,6,7,10],label:'blues'}
+  'blues':{ivs:[0,3,5,6,7,10],label:'blues'},
+  'major blues':{ivs:[0,2,3,4,7,9],label:'major blues'}
 };
 const DEG=['1','b2','2','b3','3','4','b5','5','b6','6','b7','7'];
 
@@ -665,7 +673,7 @@ const PROGRESSIONS=[
    end on its IV gets read as Mixolydian. */
 const MODE_PRIOR={major:10,minor:9,mixolydian:3,dorian:3,lydian:1,phrygian:1,
   'harmonic minor':1,'melodic minor':0,locrian:-10,
-  'major pentatonic':4,'minor pentatonic':4,blues:3};
+  'major pentatonic':4,'minor pentatonic':4,blues:3,'major blues':3};
 
 function scaleSig(root, key){
   return SCALES[key].ivs.map(i=>pc(root+i)).sort((a,b)=>a-b).join(',');
@@ -1213,7 +1221,8 @@ const KEY_MODES=[['major','Major'],['minor','Minor'],['dorian','Dorian'],['mixol
                  ['lydian','Lydian'],['phrygian','Phrygian'],['locrian','Locrian'],
                  ['harmonic minor','Harmonic min'],['melodic minor','Melodic min']];
 const SCALE_MODES=KEY_MODES.concat([['major pentatonic','Major pent'],
-                 ['minor pentatonic','Minor pent'],['blues','Blues']]);
+                 ['minor pentatonic','Minor pent'],['major blues','Major blues'],
+                 ['blues','Blues']]);
 
 /* Spell a chord's notes by stacking letters, the way the chord is actually
    built: C7 is C-E-G-Bb because the 7th must be a B of some kind, never an
@@ -1255,7 +1264,8 @@ const SEVEN=[0,1,2,3,4,5,6];
 const SCALE_STEPS={
   major:SEVEN, minor:SEVEN, dorian:SEVEN, phrygian:SEVEN, lydian:SEVEN,
   mixolydian:SEVEN, locrian:SEVEN, 'harmonic minor':SEVEN, 'melodic minor':SEVEN,
-  'major pentatonic':[0,1,2,4,5], 'minor pentatonic':[0,2,3,4,6], blues:[0,2,3,4,4,6]
+  'major pentatonic':[0,1,2,4,5], 'minor pentatonic':[0,2,3,4,6], blues:[0,2,3,4,4,6],
+  'major blues':[0,1,2,2,4,5]
 };
 const ascii=t=>String(t).replace(/♯/g,'#').replace(/♭/g,'b');
 function scaleNotes(rootPc, scaleKey, rootName){
@@ -1468,6 +1478,7 @@ function renderScale(){
     <h1 class="title">${nn(c.root)} <em>${sc.label}</em></h1>
     <p class="sub">${sc.ivs.length} notes &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
     ${seg(SCALE_SEG, c.degrees)}
+    ${vibeHTML(VIBE[c.scale])}
     ${keyPicker(c, SCALE_MODES)}
     <div class="mapwrap">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret, scaleSpellMap(c.root,c.scale))}</div>
     <p class="note">Scroll sideways for the rest of the neck. Gold is the root.
@@ -1764,6 +1775,104 @@ function tabEditor(sec){
 /* What you can actually solo over this song, rooted correctly.
    Over A major that means A major, A major pentatonic, F# minor pentatonic
    and A blues -- which are four different-sounding options, not one. */
+/* One line on what each scale actually sounds like, in playing terms
+   rather than theory terms. */
+const VIBE={
+ "major": {
+  "s": "The full major scale, the one everything else is measured against. Warm and resolved. All seven notes are in play, which is freedom and also the trap: with nothing off limits it is easy to wander.",
+  "n": "The 4th and the 7th. Both lean hard toward their neighbours, so they sound unfinished if you stop on them.",
+  "u": "Pop, folk, anything that wants to sound settled.",
+  "t": "Pass through the 4th and 7th on the way somewhere. Land on the 1, 3 or 5."
+ },
+ "minor": {
+  "s": "The standard sad scale. Darker than major but more overcast than tragic. The b7 keeps it in rock territory rather than classical.",
+  "n": "The b6. That is the specifically mournful note — take it out and you have minor pentatonic, which is far less sad.",
+  "u": "Rock, folk, most minor-key songwriting.",
+  "t": "If it is sounding too heavy, avoid the b6 and you are effectively in minor pentatonic."
+ },
+ "dorian": {
+  "s": "Minor with the gloom lifted. It has the b3 that makes it minor and a raised 6th that makes it hopeful. The combination is cool rather than sad — minor you can groove to.",
+  "n": "The natural 6th. It is the only note separating this from natural minor, and it does all the work.",
+  "u": "Funk, jam bands, modal jazz. Miles Davis's So What is the textbook case.",
+  "t": "Vamp between the i and IV chords and the Dorian sound announces itself."
+ },
+ "mixolydian": {
+  "s": "Major with a flat 7. Still bright, but loose and swaggering instead of neatly resolved. It does not pull home as hard as major, which is exactly why it loops so well without getting boring.",
+  "n": "The b7, and the bVII chord it hands you.",
+  "u": "Classic rock, country, blues-rock. Any riff going I–bVII–IV lives here.",
+  "t": "Hang on the bVII a beat longer than feels natural. That is the sound."
+ },
+ "lydian": {
+  "s": "Major with a raised 4th. Floating and wide-eyed, unresolved in a pleasant way. It sounds like something lifting off the ground.",
+  "n": "The #4. Lovely in small doses, cloying if you lean on it.",
+  "u": "Film scores, dreamy indie, the Simpsons theme.",
+  "t": "Touch the #4 and move on. It is seasoning, not the meal."
+ },
+ "phrygian": {
+  "s": "Minor with a flat 2 sitting right next to the root. That half-step gives it a dark, coiled, Spanish quality. The most dramatic of the common minor modes.",
+  "n": "The b2. Immediately recognisable, immediately heavy.",
+  "u": "Flamenco, metal, anything after menace.",
+  "t": "Move between the root and the b2 repeatedly. That rub is the whole idea."
+ },
+ "locrian": {
+  "s": "The odd one out. Its home chord is diminished, so it never settles anywhere. Almost nothing is genuinely written in it.",
+  "n": "The b5, which undermines the root rather than supporting it.",
+  "u": "Passing colour over a m7b5 chord, rarely a whole song.",
+  "t": "Treat it as something to pass through, not a key to live in."
+ },
+ "harmonic minor": {
+  "s": "Natural minor with the 7th raised back up. That opens a three-fret jump near the top which sounds dramatic and faintly Eastern. It also turns the V chord major, which is why minor-key songs borrow from it constantly.",
+  "n": "The raised 7th, and the leap up to it from the b6.",
+  "u": "Neoclassical metal, flamenco, classical minor.",
+  "t": "Use it over the V chord only, then drop back to natural minor."
+ },
+ "melodic minor": {
+  "s": "Minor on the bottom, major on top. Smooth and ambiguous. It keeps the raised 7th of harmonic minor but sidesteps that dramatic leap.",
+  "n": "Natural 6th and 7th sitting over a minor 3rd.",
+  "u": "Jazz, film, more sophisticated minor-key writing.",
+  "t": "More a jazz tool than a rock one. Worth knowing, not a first stop."
+ },
+ "major pentatonic": {
+  "s": "Five notes, no leaning tones, nothing that can clash. The brightest safe option there is. Singable almost by definition, because every awkward note has been removed.",
+  "n": "The major 3rd and the 6th. Those are what make it sunny rather than bluesy.",
+  "u": "Country, southern rock, pop hooks, most singable leads.",
+  "t": "Same box shape as minor pentatonic, moved down three frets. Learn that one relationship and you double your vocabulary."
+ },
+ "minor pentatonic": {
+  "s": "The default rock lead box and the first shape nearly everyone learns. Bluesy, slightly mournful, very forgiving. Over a minor song it is home; over a major song it adds grit — and if your solos keep sounding sadder than the song, this is usually the reason.",
+  "n": "The b3 and the b7, the two blue notes.",
+  "u": "Blues, rock, more or less everything.",
+  "t": "Too sad for the song? Slide the same shape down three frets into major pentatonic."
+ },
+ "blues": {
+  "s": "Minor pentatonic with the b5 added — the blue note proper. Grittier and more vocal than plain pentatonic, and an easy upgrade since only one note is new.",
+  "n": "The b5. Tense by design; it only works in motion.",
+  "u": "Blues, blues-rock, hard rock.",
+  "t": "Slide through the b5 from the 4th up to the 5th. Never stop on it."
+ },
+ "major blues": {
+  "s": "Major pentatonic with the b3 threaded back in. Bluesy and upbeat at once — dirt without sadness. This is the country-rock lead sound, and it is what most people are actually reaching for when they say they want bluesy but happy.",
+  "n": "The b3 sliding into the major 3rd. That one move is the entire scale.",
+  "u": "Country lead, rockabilly, Allmans and Dead flavoured rock.",
+  "t": "Hammer or slide b3 to 3 over the I chord and stop there. It sounds finished straight away."
+ }
+};
+const REL_VIBE={
+ s:"Exactly the same notes as the pentatonic above — only the home base moves. Over the same chords your phrases pull somewhere else, which is why it sounds like a different player rather than a different scale.",
+ n:"The root. Nothing else changes.",
+ u:"Anywhere you want a familiar shape to sound unfamiliar.",
+ t:"Play a lick you already know, then resolve it to the new root instead. Same fingers, different ending."};
+
+function vibeHTML(v){
+  if(!v) return '';
+  return `<p class="vibe">${v.s}</p>
+    <dl class="vibedl">
+      <div><dt>What does it</dt><dd>${v.n}</dd></div>
+      <div><dt>Where you hear it</dt><dd>${v.u}</dd></div>
+      <div><dt>Try this</dt><dd>${v.t}</dd></div>
+    </dl>`;
+}
+
 function scaleOptions(k){
   const minorish=MINORISH.includes(k.scale);
   const tonic=keyName(k.root,k.scale);
@@ -1774,12 +1883,14 @@ function scaleOptions(k){
   const out=[{root:k.root, scale:k.scale, label:'The key', name:tonic}];
   if(minorish){
     out.push({root:k.root, scale:'minor pentatonic', label:'Minor pent', name:tonic});
-    out.push({root:pc(k.root+3), scale:'major pentatonic', label:'Relative major pent', name:relName});
+    out.push({root:k.root, scale:'blues', label:'Blues', name:tonic});
+    out.push({root:pc(k.root+3), scale:'major pentatonic', label:'Relative major pent', name:relName, vibe:REL_VIBE});
   } else {
     out.push({root:k.root, scale:'major pentatonic', label:'Major pent', name:tonic});
-    out.push({root:pc(k.root+9), scale:'minor pentatonic', label:'Relative minor pent', name:relName});
+    out.push({root:k.root, scale:'major blues', label:'Major blues', name:tonic});
+    out.push({root:pc(k.root+9), scale:'minor pentatonic', label:'Relative minor pent', name:relName, vibe:REL_VIBE});
+    out.push({root:k.root, scale:'blues', label:'Blues (minor)', name:tonic});
   }
-  out.push({root:k.root, scale:'blues', label:'Blues', name:tonic});
   return out;
 }
 // keyName gives D♯, scaleNotes gives D# -- make the dropdown consistent
@@ -1801,6 +1912,7 @@ function songScales(k){
       h+=`<option value="${j}"${j===i?' selected':''}>${x.label} · ${keyName(x.root,x.scale)} ${SCALES[x.scale].label}</option>`;
     });
     h+=`</select>`;
+    h+=vibeHTML(o.vibe||VIBE[o.scale]);
     h+=`<p class="sub"><b>${scaleNotes(o.root,o.scale,o.name).join('  ')}</b></p>`;
     h+=`<div class="mapwrap">${fretboardSVG(o.root, sc.ivs, false, 15, scaleSpellMap(o.root,o.scale,o.name))}</div>`;
     h+=`<p class="why">Gold is the root. The options fit the same chords but land on
