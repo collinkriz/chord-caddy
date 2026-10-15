@@ -1478,9 +1478,9 @@ function renderScale(){
     <h1 class="title">${nn(c.root)} <em>${sc.label}</em></h1>
     <p class="sub">${sc.ivs.length} notes &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
     ${seg(SCALE_SEG, c.degrees)}
-    ${vibeHTML(VIBE[c.scale])}
     ${keyPicker(c, SCALE_MODES)}
     <div class="mapwrap">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret, scaleSpellMap(c.root,c.scale))}</div>
+    ${vibeHTML(VIBE[c.scale])}
     <p class="note">Scroll sideways for the rest of the neck. Gold is the root.
        Degrees show each note's number in the scale, which is what makes the shape
        portable to any key.</p>`;
@@ -1779,97 +1779,97 @@ function tabEditor(sec){
    rather than theory terms. */
 const VIBE={
  "major": {
-  "s": "The full major scale, the one everything else is measured against. Warm and resolved. All seven notes are in play, which is freedom and also the trap: with nothing off limits it is easy to wander.",
-  "n": "The 4th and the 7th. Both lean hard toward their neighbours, so they sound unfinished if you stop on them.",
-  "u": "Pop, folk, anything that wants to sound settled.",
-  "t": "Pass through the 4th and 7th on the way somewhere. Land on the 1, 3 or 5."
+  "s": "Every note the song is built from — seven of them. Nothing here is wrong, but two of them are restless: they sound like they are waiting for you to move somewhere else. Lovely for melodies, easy to ramble in.",
+  "n": "The 4th and 7th notes in the list are the restless ones. Play through them, not onto them.",
+  "u": "Pop, folk, anything that sounds settled and sunny.",
+  "t": "Play a phrase and stop on the 4th note in the list, then play the same phrase and stop on a gold dot. The first hangs in the air; the second sounds finished. That difference is what 'restless' means."
  },
  "minor": {
-  "s": "The standard sad scale. Darker than major but more overcast than tragic. The b7 keeps it in rock territory rather than classical.",
-  "n": "The b6. That is the specifically mournful note — take it out and you have minor pentatonic, which is far less sad.",
+  "s": "Every note of a sad-sounding song, seven in all. Darker than major, but more grey than tragic. It is the sound of most minor-key rock and folk.",
+  "n": "The 6th note in the list carries most of the sadness. Leave it out and you have the easier five-note minor shape.",
   "u": "Rock, folk, most minor-key songwriting.",
-  "t": "If it is sounding too heavy, avoid the b6 and you are effectively in minor pentatonic."
+  "t": "Play all seven, then play them again leaving out the 6th. Listen to how much of the sadness goes with it. You have just heard the difference between this and the five-note minor shape."
  },
  "dorian": {
-  "s": "Minor with the gloom lifted. It has the b3 that makes it minor and a raised 6th that makes it hopeful. The combination is cool rather than sad — minor you can groove to.",
-  "n": "The natural 6th. It is the only note separating this from natural minor, and it does all the work.",
-  "u": "Funk, jam bands, modal jazz. Miles Davis's So What is the textbook case.",
-  "t": "Vamp between the i and IV chords and the Dorian sound announces itself."
+  "s": "A sad-sounding scale with the gloom lifted out of it. It is minor, but it grooves instead of moping — cool rather than mournful.",
+  "n": "The 6th note in the list sits a fret higher than it would in plain minor. That single fret is the whole difference.",
+  "u": "Funk, jam bands, Santana, Miles Davis.",
+  "t": "Play this against plain minor, one after the other. Only the 6th note differs, by one fret, but the whole mood shifts from heavy to hopeful. That one fret is worth hearing on its own."
  },
  "mixolydian": {
-  "s": "Major with a flat 7. Still bright, but loose and swaggering instead of neatly resolved. It does not pull home as hard as major, which is exactly why it loops so well without getting boring.",
-  "n": "The b7, and the bVII chord it hands you.",
-  "u": "Classic rock, country, blues-rock. Any riff going I–bVII–IV lives here.",
-  "t": "Hang on the bVII a beat longer than feels natural. That is the sound."
+  "s": "A bright, major-sounding scale with one note dropped a fret. That small change takes the polish off and adds swagger. It also means it never quite pulls back home, which is why riffs built on it can loop forever without getting dull.",
+  "n": "The 7th note in the list, sitting a fret lower than you would expect.",
+  "u": "Classic rock, country, the Stones, the Dead, a huge number of riffs.",
+  "t": "Play your home chord, then the major chord a whole step below it, then home again. Notice it does not feel like an ending — it feels like it could go round again. That looping quality is the point of it."
  },
  "lydian": {
-  "s": "Major with a raised 4th. Floating and wide-eyed, unresolved in a pleasant way. It sounds like something lifting off the ground.",
-  "n": "The #4. Lovely in small doses, cloying if you lean on it.",
+  "s": "Major with one note nudged a fret higher. Floating and dreamy, like something lifting off the ground. A little goes a long way.",
+  "n": "The 4th note in the list, raised a fret. It is the whole flavour.",
   "u": "Film scores, dreamy indie, the Simpsons theme.",
-  "t": "Touch the #4 and move on. It is seasoning, not the meal."
+  "t": "Hold the 4th note in the list over your home chord and let it ring. It should sound lovely and faintly unresolved at the same time, like a question you do not mind leaving open."
  },
  "phrygian": {
-  "s": "Minor with a flat 2 sitting right next to the root. That half-step gives it a dark, coiled, Spanish quality. The most dramatic of the common minor modes.",
-  "n": "The b2. Immediately recognisable, immediately heavy.",
+  "s": "Dark and coiled. It has a note sitting right next to the home note, only one fret away, and that closeness creates a tension you can feel immediately. Spanish guitar and metal both live here.",
+  "n": "The 2nd note in the list, one fret above a gold dot.",
   "u": "Flamenco, metal, anything after menace.",
-  "t": "Move between the root and the b2 repeatedly. That rub is the whole idea."
+  "t": "Play a gold dot, then the note one fret above it, then back. Feel how much tension sits in that single fret. Nothing else in the scale does as much work."
  },
  "locrian": {
-  "s": "The odd one out. Its home chord is diminished, so it never settles anywhere. Almost nothing is genuinely written in it.",
-  "n": "The b5, which undermines the root rather than supporting it.",
-  "u": "Passing colour over a m7b5 chord, rarely a whole song.",
-  "t": "Treat it as something to pass through, not a key to live in."
+  "s": "The oddball. It has no stable home — the chord built on its root sounds unresolved no matter what you do. Almost no real songs use it.",
+  "n": "The 5th note in the list is a fret lower than normal, which is what pulls the floor out.",
+  "u": "A passing colour in jazz. Rarely a whole song.",
+  "t": "Try to end a phrase so it sounds finished. You will struggle, and that is the lesson — this scale has no resting place by design."
  },
  "harmonic minor": {
-  "s": "Natural minor with the 7th raised back up. That opens a three-fret jump near the top which sounds dramatic and faintly Eastern. It also turns the V chord major, which is why minor-key songs borrow from it constantly.",
-  "n": "The raised 7th, and the leap up to it from the b6.",
-  "u": "Neoclassical metal, flamenco, classical minor.",
-  "t": "Use it over the V chord only, then drop back to natural minor."
+  "s": "Sad, but dramatic rather than mopey. One note is pushed up a fret, which opens a noticeably wide gap near the top of the scale. That gap is what gives it the slightly Middle-Eastern, classical-metal flavour.",
+  "n": "The 7th note in the list, raised a fret. On the map you will see a three-fret gap below it.",
+  "u": "Flamenco, neoclassical metal, classical minor.",
+  "t": "Play up the scale slowly and listen for the wide gap near the top. That stretch is what makes it sound dramatic rather than merely sad. Compare it to plain minor and the drama is obvious."
  },
  "melodic minor": {
-  "s": "Minor on the bottom, major on top. Smooth and ambiguous. It keeps the raised 7th of harmonic minor but sidesteps that dramatic leap.",
-  "n": "Natural 6th and 7th sitting over a minor 3rd.",
-  "u": "Jazz, film, more sophisticated minor-key writing.",
-  "t": "More a jazz tool than a rock one. Worth knowing, not a first stop."
+  "s": "Minor at the bottom, almost major at the top. Smooth and slippery. It smooths out the big gap that harmonic minor has.",
+  "n": "The 6th and 7th notes in the list are both raised a fret compared with plain minor.",
+  "u": "Jazz and film writing more than rock.",
+  "t": "Play it ascending and it leans minor; linger near the top and it almost turns major. Hearing it wobble between the two is the whole character."
  },
  "major pentatonic": {
-  "s": "Five notes, no leaning tones, nothing that can clash. The brightest safe option there is. Singable almost by definition, because every awkward note has been removed.",
-  "n": "The major 3rd and the 6th. Those are what make it sunny rather than bluesy.",
-  "u": "Country, southern rock, pop hooks, most singable leads.",
-  "t": "Same box shape as minor pentatonic, moved down three frets. Learn that one relationship and you double your vocabulary."
+  "s": "Five notes, and the single easiest place to sound good. The two troublesome notes have simply been removed, so there is nothing in here that can clash. Bright, open, and the source of a huge number of singable guitar melodies.",
+  "n": "Nothing to avoid — that is the point. Every note is safe to land on.",
+  "u": "Country, classic rock, big melodic hooks.",
+  "t": "Play any five notes at random and finish on a gold dot. It will sound deliberate. Do it again finishing somewhere else and notice it sounds unfinished — that is how much the landing note matters."
  },
  "minor pentatonic": {
-  "s": "The default rock lead box and the first shape nearly everyone learns. Bluesy, slightly mournful, very forgiving. Over a minor song it is home; over a major song it adds grit — and if your solos keep sounding sadder than the song, this is usually the reason.",
-  "n": "The b3 and the b7, the two blue notes.",
-  "u": "Blues, rock, more or less everything.",
-  "t": "Too sad for the song? Slide the same shape down three frets into major pentatonic."
+  "s": "Five notes, and the shape nearly every guitarist learns first. Very forgiving — hard to play a genuinely wrong note. But it leans sad, and over a cheerful song it can quietly drag things down. If your solos keep coming out gloomier than the song, this is usually the reason.",
+  "n": "The 2nd and 5th notes in the list sit a fret lower than the cheerful versions would. That lowness is the ache.",
+  "u": "Blues, rock, an enormous share of all guitar solos.",
+  "t": "Play the same shape three frets toward the headstock and listen to what changes. Your fingers do nothing different — only where home sits — and that alone flips it from sad to cheerful."
  },
  "blues": {
-  "s": "Minor pentatonic with the b5 added — the blue note proper. Grittier and more vocal than plain pentatonic, and an easy upgrade since only one note is new.",
-  "n": "The b5. Tense by design; it only works in motion.",
+  "s": "The sad five-note shape with one extra note squeezed in between two others. That squeezed note is deliberately tense — it is the sound of someone leaning on a string on an old record. It only works while you are moving through it.",
+  "n": "The 4th note in the list. On the map you will spot two dots unusually close together — that is it.",
   "u": "Blues, blues-rock, hard rock.",
-  "t": "Slide through the b5 from the 4th up to the 5th. Never stop on it."
+  "t": "Stop dead on the 4th note in the list and listen: it sounds wrong, almost painful. Now pass straight through it to the next note. Same note, completely different effect — that is why it only works in motion."
  },
  "major blues": {
-  "s": "Major pentatonic with the b3 threaded back in. Bluesy and upbeat at once — dirt without sadness. This is the country-rock lead sound, and it is what most people are actually reaching for when they say they want bluesy but happy.",
-  "n": "The b3 sliding into the major 3rd. That one move is the entire scale.",
+  "s": "The bright five-note shape with one slightly dirty note added back in. On its own that note sounds sour; slid quickly into the one next to it, it sounds like country and rock'n'roll lead playing. That is the whole trick — it is grit you pass through, not grit you sit in. This is what most people mean when they say they want bluesy but upbeat.",
+  "n": "The 3rd and 4th notes in the list sit one fret apart. That neighbouring pair is the sound.",
   "u": "Country lead, rockabilly, Allmans and Dead flavoured rock.",
-  "t": "Hammer or slide b3 to 3 over the I chord and stop there. It sounds finished straight away."
+  "t": "Play the two side-by-side dots back to back and notice how different they feel. The lower one sounds unfinished, the higher one sounds settled. Nearly all this scale's character lives in that one step."
  }
 };
 const REL_VIBE={
  s:"Exactly the same notes as the pentatonic above — only the home base moves. Over the same chords your phrases pull somewhere else, which is why it sounds like a different player rather than a different scale.",
  n:"The root. Nothing else changes.",
  u:"Anywhere you want a familiar shape to sound unfamiliar.",
- t:"Play a lick you already know, then resolve it to the new root instead. Same fingers, different ending."};
+ t:"Play a lick you already know, then end it on one of the new gold dots instead. Same fingers, same notes — listen to how much the ending alone changes the mood."};
 
 function vibeHTML(v){
   if(!v) return '';
   return `<p class="vibe">${v.s}</p>
     <dl class="vibedl">
-      <div><dt>What does it</dt><dd>${v.n}</dd></div>
-      <div><dt>Where you hear it</dt><dd>${v.u}</dd></div>
-      <div><dt>Try this</dt><dd>${v.t}</dd></div>
+      <div><dt>The note that does it</dt><dd>${v.n}</dd></div>
+      <div><dt>Sounds like</dt><dd>${v.u}</dd></div>
+      <div><dt>Listen for</dt><dd>${v.t}</dd></div>
     </dl>`;
 }
 
@@ -1909,14 +1909,13 @@ function songScales(k){
     const o=opts[i], sc=SCALES[o.scale];
     h+=`<select class="scalesel" data-scalesel="1" aria-label="Which scale">`;
     opts.forEach((x,j)=>{
-      h+=`<option value="${j}"${j===i?' selected':''}>${x.label} · ${keyName(x.root,x.scale)} ${SCALES[x.scale].label}</option>`;
+      h+=`<option value="${j}"${j===i?' selected':''}>${x.label} · ${optName(x)} ${SCALES[x.scale].label}</option>`;
     });
     h+=`</select>`;
-    h+=vibeHTML(o.vibe||VIBE[o.scale]);
     h+=`<p class="sub"><b>${scaleNotes(o.root,o.scale,o.name).join('  ')}</b></p>`;
     h+=`<div class="mapwrap">${fretboardSVG(o.root, sc.ivs, false, 15, scaleSpellMap(o.root,o.scale,o.name))}</div>`;
-    h+=`<p class="why">Gold is the root. The options fit the same chords but land on
-        different notes, so they do not sound alike.</p>`;
+    h+=`<p class="why">Gold dots are home — the note the scale is named after.</p>`;
+    h+=vibeHTML(o.vibe||VIBE[o.scale]);
   }
   return h+`</div>`;
 }
