@@ -1,0 +1,57 @@
+{
+  "songs": [
+    {
+      "id": "smv9zcrs7ad82",
+      "name": "Untitled",
+      "updated": 1792095495376,
+      "sections": [
+        {
+          "id": "smv9zcrs7wvoe",
+          "kind": "Intro",
+          "chords": [
+            {
+              "root": 6,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 11,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 1,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 1,
+              "type": "major",
+              "flat": false
+            }
+          ],
+          "text": ""
+        },
+        {
+          "id": "smv9zcrs7p749",
+          "kind": "Verse",
+          "chords": [],
+          "text": ""
+        },
+        {
+          "id": "smv9zcrs71ch3",
+          "kind": "Chorus",
+          "chords": [],
+          "text": ""
+        },
+        {
+          "id": "smv9zcvlke4pm",
+          "kind": "Solo",
+          "chords": [],
+          "text": ""
+        }
+      ]
+    }
+  ],
+  "deleted": {}
+}
