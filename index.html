@@ -176,10 +176,21 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
 .tfpad{flex:0 0 auto; padding:.5rem .6rem .7rem; border-top:1px solid var(--edge);
   background:var(--case)}
 .tfpad .tabtools{margin:.5rem 0 0}
-.numpad.big{display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; margin:0}
-.numpad.big button{min-height:46px; min-width:0; font-size:1rem}
-.numpad.big button:nth-last-child(2){grid-column:span 2}
-.numpad.big button:last-child{grid-column:span 2}
+.numpad.big{display:grid; grid-template-columns:repeat(8,1fr); gap:.35rem; margin:0}
+.numpad.big button{min-height:44px; min-width:0; font-size:.98rem; padding:0}
+.padacts{display:grid; grid-template-columns:1fr 1fr; gap:.4rem; margin-top:.4rem}
+.padacts button{min-height:44px; border:1px solid var(--edge); border-radius:5px;
+  color:var(--nickel); font-size:.9rem; background:var(--case-2)}
+.padacts .del{color:var(--brass); border-color:var(--brass)}
+.tfwhere{margin:0 0 .45rem; font-size:.84rem; color:var(--brass);
+  font-variant-numeric:tabular-nums}
+
+/* Taller rows up here. There is room, and a 34px row with a 1px line is a
+   fiddly target when the six strings sit right next to each other. */
+.tabfull .tpos{height:2.7rem}
+.tabfull .tabed{grid-template-columns:1.6rem repeat(var(--cols),2.3rem)}
+.tabfull .tpos b{font-size:.95rem}
+.tabfull .tstr{font-size:.86rem}
 .tabtools{display:flex; gap:.4rem; margin-bottom:.4rem}
 .tabtools button{min-height:40px; padding:0 .75rem; font-size:.84rem; color:var(--nickel);
   border:1px dashed var(--edge); border-radius:5px}
@@ -1103,7 +1114,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T20:52:53Z';
+const BUILT='2026-10-16T20:59:11Z';
 let deployed=null;
 
 function stampText(){
@@ -1957,10 +1968,15 @@ function tabFullscreen(sec){
     <div class="tfboard">${tabStaff(sec,true)}</div>
     <div class="tfpad">`;
   if(sel.split(':')[0]===sec.id){
+    const [,sr,sc]=sel.split(':');
+    h+=`<p class="tfwhere">${TAB_STRINGS[+sr]} string &nbsp;·&nbsp; bar ${Math.floor(sc/4)+1}, beat ${(+sc)%4+1}</p>`;
     h+=`<div class="numpad big">`;
     for(let n=0;n<=15;n++) h+=`<button data-tset="${n}">${n}</button>`;
-    h+=`<button data-tset="x">× mute</button><button data-tset="">erase</button>`;
     h+=`</div>`;
+    h+=`<div class="padacts">
+          <button class="del" data-tset="">⌫ Delete note</button>
+          <button data-tset="x">× Mute string</button>
+        </div>`;
   } else {
     h+=`<p class="hint">Tap a position on the staff to start.</p>`;
   }
@@ -1973,6 +1989,11 @@ function tabFullscreen(sec){
 
 function tabEditor(sec){
   const sel=S.songs.tsel||'';
+  // While the fullscreen editor is open this section's staff lives there.
+  // Rendering it twice puts two identical sets of tap targets in the page.
+  if(S.songs.tabFull===sec.id)
+    return `<p class="hint">Editing this tab full screen.</p>
+            <div class="tabtools"><button data-tabfull="${sec.id}">Reopen</button></div>`;
   let h=tabStaff(sec,true);
   h+=`<div class="tabtools">
         <button data-tabfull="${sec.id}">\u2922 Full screen</button>
