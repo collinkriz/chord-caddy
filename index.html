@@ -111,15 +111,38 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
   border:1px solid var(--edge); border-radius:5px; color:var(--bone);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem;
   white-space:pre-wrap; overflow-x:auto}
-.tabwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:.5rem 0 .4rem;
-  border:1px solid var(--edge); border-radius:5px; background:var(--case-2); padding:.4rem}
-.tabgrid{display:grid; grid-template-columns:1.3rem repeat(var(--cols),2rem); gap:2px}
-.tstr{display:flex; align-items:center; justify-content:center; font-size:.78rem;
-  color:var(--nickel); font-family:ui-monospace,Menlo,monospace}
-.tcell{height:2rem; border:1px solid var(--edge); border-radius:3px; background:var(--raise);
-  color:var(--faint); font-size:.85rem; font-family:ui-monospace,Menlo,monospace; padding:0}
-.tcell.has{color:var(--bone); border-color:var(--nickel); font-weight:600}
-.tcell.on{border-color:var(--brass); background:#2A3A31; color:var(--brass)}
+/* Real tab: six horizontal string lines with the fret numbers sitting on
+   them. Each cell paints its own slice of the line, so with no gaps the line
+   reads as continuous. A number carries the board colour behind it, which
+   breaks the line exactly the way printed tab does.
+   NOTE: this class must not be called .tabgrid -- that name belongs to the
+   note row under the chord diagrams, and the two silently collided. */
+.tabwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:.5rem 0 .5rem;
+  border:1px solid var(--edge); border-radius:5px; background:var(--case-2);
+  padding:.7rem .5rem}
+.tabed{display:grid; grid-template-columns:1.45rem repeat(var(--cols),1.85rem);
+  gap:0; width:max-content}
+.tstr{display:flex; align-items:center; justify-content:flex-end; padding-right:.35rem;
+  font-size:.76rem; color:var(--nickel); font-family:ui-monospace,Menlo,monospace}
+.tpos{
+  position:relative; height:2.05rem; padding:0; border:none; border-radius:0;
+  background-color:transparent;
+  background-image:linear-gradient(to bottom,
+    transparent calc(50% - 0.5px), var(--nickel) calc(50% - 0.5px),
+    var(--nickel) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+}
+.tpos.bar{box-shadow:inset 1px 0 0 var(--edge)}
+.tpos b{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  background:var(--case-2); padding:0 .18rem; font-weight:600; font-size:.82rem;
+  font-family:ui-monospace,Menlo,monospace; color:var(--bone);
+  font-variant-numeric:tabular-nums; line-height:1;
+}
+.tpos.on{background-color:rgba(224,172,68,.16)}
+.tpos.on b{color:var(--brass)}
+.tpos.on::after{content:''; position:absolute; inset:2px;
+  border:1px solid var(--brass); border-radius:3px}
+.tabed.ro .tpos{cursor:default}
 .tabtools{display:flex; gap:.4rem; margin-bottom:.4rem}
 .tabtools button{min-height:40px; padding:0 .75rem; font-size:.84rem; color:var(--nickel);
   border:1px dashed var(--edge); border-radius:5px}
@@ -1040,7 +1063,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T00:07:52Z';
+const BUILT='2026-10-16T20:28:22Z';
 let deployed=null;
 
 function stampText(){
@@ -1766,7 +1789,7 @@ function renderSongs(){
       h+=`<textarea class="sriff" data-stext="${sec.id}" rows="2"
             placeholder="notes, lyric cue…">${esc(sec.text||'')}</textarea>`;
     } else {
-      if(sec.tab && !tabIsEmpty(sec.tab)) h+=`<pre class="riffout tabout">${esc(asciiTab(sec.tab))}</pre>`;
+      if(sec.tab && !tabIsEmpty(sec.tab)) h+=tabStaff(sec,false);
       if(sec.text) h+=`<pre class="riffout">${esc(sec.text)}</pre>`;
     }
     h+=`</div>`;
@@ -1782,37 +1805,42 @@ function renderSongs(){
 
 /* A 6-string grid. Tapping a cell opens a number pad rather than the
    system keyboard -- far less painful with a guitar in your lap. */
-function tabEditor(sec){
-  const t=sec.tab, sel=S.songs.tsel||'';
-  let h=`<div class="tabwrap"><div class="tabgrid" style="--cols:${t.cols}">`;
+function tabStaff(sec, editable){
+  const t=sec.tab, sel=editable?(S.songs.tsel||''):'';
+  let h=`<div class="tabwrap"><div class="tabed${editable?'':' ro'}" style="--cols:${t.cols}">`;
   for(let r=0;r<6;r++){
     h+=`<span class="tstr">${TAB_STRINGS[r]}</span>`;
     for(let c=0;c<t.cols;c++){
       const key=sec.id+':'+r+':'+c, v=tabCell(t,r,c);
-      h+=`<button class="tcell${sel===key?' on':''}${v?' has':''}" data-tcell="${key}">${v||'·'}</button>`;
+      const cls='tpos'+(c&&c%4===0?' bar':'')+(sel===key?' on':'');
+      const inner=v?`<b>${v}</b>`:'';
+      h+= editable
+        ? `<button class="${cls}" data-tcell="${key}" aria-label="string ${TAB_STRINGS[r]}, beat ${c+1}">${inner}</button>`
+        : `<span class="${cls}">${inner}</span>`;
     }
   }
-  h+=`</div></div>`;
+  return h+`</div></div>`;
+}
+
+function tabEditor(sec){
+  const sel=S.songs.tsel||'';
+  let h=tabStaff(sec,true);
   h+=`<div class="tabtools">
         <button data-tabcols="${sec.id}">+ 8 beats</button>
         <button data-tabdel="${sec.id}">Remove tab</button>
       </div>`;
   if(sel.split(':')[0]===sec.id){
     h+=`<div class="numpad">`;
-    for(let n=0;n<=12;n++) h+=`<button data-tset="${n}">${n}</button>`;
+    for(let n=0;n<=15;n++) h+=`<button data-tset="${n}">${n}</button>`;
     h+=`<button data-tset="x">×</button><button data-tset="">clear</button>`;
     h+=`<button class="done" data-tset="done">done</button></div>`;
   } else {
-    h+=`<p class="hint">Tap a dot to put a fret number on that string.</p>`;
+    h+=`<p class="hint">Tap anywhere on a string line to put a fret number there.
+        The faint vertical lines mark every four beats.</p>`;
   }
   return h;
 }
 
-/* What you can actually solo over this song, rooted correctly.
-   Over A major that means A major, A major pentatonic, F# minor pentatonic
-   and A blues -- which are four different-sounding options, not one. */
-/* One line on what each scale actually sounds like, in playing terms
-   rather than theory terms. */
 const VIBE={
  "major": {
   "s": "Every note the song is built from — seven of them. Nothing here is wrong, but two of them are restless: they sound like they are waiting for you to move somewhere else. Lovely for melodies, easy to ramble in.",
