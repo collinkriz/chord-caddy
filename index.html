@@ -410,6 +410,7 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
     <button id="go">Show</button>
   </div>
 </div>
+<div id="overlay"></div>
 
 <script>
 /* ==================================================================
@@ -1114,7 +1115,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T20:59:11Z';
+const BUILT='2026-10-16T21:03:02Z';
 let deployed=null;
 
 function stampText(){
@@ -1280,6 +1281,14 @@ function goBack(){
 }
 
 const stage=document.getElementById('stage');
+const overlay=document.getElementById('overlay');
+let overlayHTML='';
+// handlers must reach both the page and the overlay
+function qa(sel){
+  const a=Array.prototype.slice.call(stage.querySelectorAll(sel));
+  const b=overlay?Array.prototype.slice.call(overlay.querySelectorAll(sel)):[];
+  return a.concat(b);
+}
 
 const chipbar=document.getElementById('chips');
 const tabs=document.getElementById('tabs');
@@ -1422,43 +1431,44 @@ function render(){
   const c=cur();
   setSpelling(c);
   stage.scrollTop=0;
-  if(S.section==='chords') (c.mode==='triad'?renderTriad:renderChord)();
-  else if(S.section==='scales') renderScale();
-  else if(S.section==='find') renderFind();
+  if(S.section==='chords') { overlayHTML=''; { overlayHTML=''; { overlayHTML=''; { overlayHTML=''; (c.mode==='triad'?renderTriad:renderChord)(); } } } }
+  else if(S.section==='scales'){ overlayHTML=''; renderScale(); }
+  else if(S.section==='find'){ overlayHTML=''; renderFind(); }
   else if(S.section==='songs') renderSongs();
-  else (S.keys.tab==='prog'?renderProg:renderKey)();
+  else { overlayHTML=''; (S.keys.tab==='prog'?renderProg:renderKey)(); }
   // Append the footer BEFORE anything is bound: assigning innerHTML replaces
   // every child node, which would silently drop the listeners below.
   stage.innerHTML += buildFooter();
+  overlay.innerHTML = overlayHTML; overlayHTML='';
   if(S.section==='songs') bindSongInputs();
   if(S.songs.tabFull){
-    const on=stage.querySelector('.tfboard .tpos.on');
+    const on=overlay.querySelector('.tfboard .tpos.on');
     if(on && on.scrollIntoView) try{
       on.scrollIntoView({block:'nearest', inline:'center'});
     }catch(e){}
   }
-  stage.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
-  stage.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
+  qa('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
-  stage.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-mode]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     cur().scale=b.dataset.mode; })));
-  stage.querySelectorAll('[data-fadd]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-fadd]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const f=S.find, root=+b.dataset.fadd, flat=b.dataset.fflat==='1';
     if(f.mode==='chords') f.chords.push({root,type:'major',flat});
     else f.notes.push({pc:root,flat});
   })));
-  stage.querySelectorAll('[data-fcyc]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-fcyc]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const f=S.find, i=+b.dataset.fcyc;
     if(f.mode!=='chords') { f.notes.splice(i,1); return; }
     const c=f.chords[i];
     c.type=QCYCLE[(QCYCLE.indexOf(c.type)+1)%QCYCLE.length];
   })));
-  stage.querySelectorAll('[data-fdel]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-fdel]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const f=S.find, i=+b.dataset.fdel;
     (f.mode==='chords'?f.chords:f.notes).splice(i,1);
   })));
   const sg=S.songs;
-  const bind=(sel,fn)=>stage.querySelectorAll(sel).forEach(b=>b.addEventListener('click',()=>commit(()=>fn(b))));
+  const bind=(sel,fn)=>qa(sel).forEach(b=>b.addEventListener('click',()=>commit(()=>fn(b))));
   bind('[data-sopen2]', b=>{ sg.openId=b.dataset.sopen2; sg.editing=false; sg.addTo=null; });
   bind('[data-sdelsong]', b=>{ const id=b.dataset.sdelsong;
     sg.deleted[id]=Date.now(); sg.list=sg.list.filter(x=>x.id!==id); saveSongs(); });
@@ -1479,7 +1489,7 @@ function render(){
     if(sec){ const c=sec.chords[+b.dataset.i];
       c.type=QCYCLE[(QCYCLE.indexOf(c.type)+1)%QCYCLE.length]; saveSongs(); } });
   bind('[data-scaletoggle]', ()=>{ S.songs.scaleOpen=!S.songs.scaleOpen; });
-  stage.querySelectorAll('[data-scalesel]').forEach(el=>el.addEventListener('change',()=>commit(()=>{
+  qa('[data-scalesel]').forEach(el=>el.addEventListener('change',()=>commit(()=>{
     S.songs.scalePick=+el.value; S.songs.scaleOpen=true; })));
   bind('[data-tabnew]', b=>{ const g=openSong(); touchSong(g);
     const sec=g&&g.sections.find(x=>x.id===b.dataset.tabnew);
@@ -1518,12 +1528,12 @@ function render(){
   });
   bind('[data-sdelch]', b=>{ const g=openSong(); touchSong(g); const sec=g&&g.sections.find(x=>x.id===b.dataset.sdelch);
     if(sec){ sec.chords.splice(+b.dataset.i,1); saveSongs(); } });
-  stage.querySelectorAll('[data-sync]').forEach(b=>b.addEventListener('click',()=>syncNow()));
-  stage.querySelectorAll('[data-sexport]').forEach(b=>b.addEventListener('click',exportSongs));
-  stage.querySelectorAll('[data-simport]').forEach(b=>b.addEventListener('click',()=>{
+  qa('[data-sync]').forEach(b=>b.addEventListener('click',()=>syncNow()));
+  qa('[data-sexport]').forEach(b=>b.addEventListener('click',exportSongs));
+  qa('[data-simport]').forEach(b=>b.addEventListener('click',()=>{
     const f=document.getElementById('songfile'); if(f) f.click(); }));
 
-  stage.querySelectorAll('[data-goroot]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+  qa('[data-goroot]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     S.keys.root=+b.dataset.goroot; S.keys.scale=b.dataset.goscale;
     S.keys.flat=null; S.keys.tab='chords'; S.section='keys';
   })));
@@ -1913,7 +1923,7 @@ function renderSongs(){
       ? 'Arrows reorder a section, × deletes it, and tapping the section name cycles Intro → Verse → Chorus and so on. Everything saves as you type.'
       : 'Tap any chord to see its shapes. Hit Edit to change the arrangement.'}</p>`;
   const full = ed && S.songs.tabFull && g.sections.find(x=>x.id===S.songs.tabFull);
-  if(full) h+=tabFullscreen(full);
+  overlayHTML = full ? tabFullscreen(full) : '';
   stage.innerHTML=h;
 }
 
@@ -2199,7 +2209,7 @@ function bindSongInputs(){
   if(name) name.addEventListener('input',()=>{
     const g=openSong(); if(g){ g.name=name.value; touchSong(g); saveSongs(); }
   });
-  stage.querySelectorAll('[data-stext]').forEach(t=>t.addEventListener('input',()=>{
+  qa('[data-stext]').forEach(t=>t.addEventListener('input',()=>{
     const g=openSong(); if(!g) return;
     const sec=g.sections.find(x=>x.id===t.dataset.stext);
     if(sec){ sec.text=t.value; touchSong(g); saveSongs(); }
@@ -2276,12 +2286,20 @@ const CHIPSETS={
   prog:[['Major','major'],['Minor','minor'],['Mixolydian','mixolydian'],['Dorian','dorian'],
         ['Sevenths','sevenths']],
   find:[['Chords','find chords'],['Notes','find notes'],['Clear','clear']],
-  songs:[['New song','new song'],['All songs','all songs'],['Edit','edit song'],['Done','done editing']]
+  songs:[['New song','new song']]
 };
+/* The Songs chips depend on where you are: nothing about starting or
+   listing songs is useful while you are editing one. */
+function songChips(){
+  if(!S.songs.openId) return [['+ New song','new song']];
+  if(S.songs.editing) return [['Done','done editing']];
+  return [['Edit','edit song'],['All songs','all songs'],['+ New song','new song']];
+}
 function renderChips(){
   chipbar.innerHTML='';
   chipbar.scrollLeft=0;
-  for(const [label,cmd] of CHIPSETS[viewName()]){
+  const set = viewName()==='songs' ? songChips() : CHIPSETS[viewName()];
+  for(const [label,cmd] of set){
     const b=document.createElement('button');
     b.className='chip'; b.textContent=label;
     b.addEventListener('click',()=>run(cmd));
