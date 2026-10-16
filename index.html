@@ -151,6 +151,35 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
 .tabed.ed .tpos.on::before{background:var(--brass)}
 .tpos.on b{color:var(--brass); background:#2E3A2F}
 .tabed.ro .tpos{cursor:default}
+/* read-only systems stack and fit the page, so no sideways scrolling */
+.tabsystems{display:flex; flex-direction:column; gap:.4rem}
+.tabsystems .tabwrap{margin:0; overflow-x:auto}
+.tabsystems .tabed{width:100%;
+  grid-template-columns:1.5rem repeat(var(--cols),minmax(1.6rem,1fr))}
+.from{font-style:normal; font-size:.78rem; color:var(--faint); margin-left:.3rem}
+
+.tabfull{
+  position:fixed; inset:0; z-index:60; display:flex; flex-direction:column;
+  background:var(--case-2);
+  padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+}
+.tfhead{flex:0 0 auto; display:flex; align-items:baseline; gap:.5rem;
+  padding:.7rem 1rem; border-bottom:1px solid var(--edge); background:var(--case)}
+.tfhead b{font-family:"Barlow Condensed",Barlow,sans-serif; font-size:1.3rem;
+  font-weight:600; letter-spacing:.04em; color:var(--brass)}
+.tfhead span{font-size:.84rem; color:var(--nickel)}
+.tfhead button{margin-left:auto; min-height:40px; padding:0 .9rem; font-size:.92rem;
+  color:var(--brass); border:1px solid var(--brass); border-radius:5px}
+.tfboard{flex:1 1 auto; overflow:auto; -webkit-overflow-scrolling:touch;
+  display:flex; align-items:center; padding:.4rem .6rem}
+.tfboard .tabwrap{margin:0; border:none; background:transparent; width:100%}
+.tfpad{flex:0 0 auto; padding:.5rem .6rem .7rem; border-top:1px solid var(--edge);
+  background:var(--case)}
+.tfpad .tabtools{margin:.5rem 0 0}
+.numpad.big{display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; margin:0}
+.numpad.big button{min-height:46px; min-width:0; font-size:1rem}
+.numpad.big button:nth-last-child(2){grid-column:span 2}
+.numpad.big button:last-child{grid-column:span 2}
 .tabtools{display:flex; gap:.4rem; margin-bottom:.4rem}
 .tabtools button{min-height:40px; padding:0 .75rem; font-size:.84rem; color:var(--nickel);
   border:1px dashed var(--edge); border-radius:5px}
@@ -724,9 +753,12 @@ function analyzeNotes(seq){
       // punish scales carrying tones the riff never used
       let score = covered*12 - missing.length*30 - (scaleSet.length-covered)*2.5;
       score += MODE_PRIOR[key]||0;
-      if(seq[0]===root) score+=6;                       // started there
-      if(seq[seq.length-1]===root) score+=8;            // landed there
+      // In a melody the opening note is the stronger clue: licks very often
+      // END on the b7 or the 4th, but they rarely START anywhere but home.
+      if(seq[0]===root) score+=9;                       // started there
+      if(seq[seq.length-1]===root) score+=5;            // landed there
       score += seq.filter(p=>p===root).length*2.5;      // kept coming back
+      if(Math.min(...seq.map(p=>pc(p-root)))===0) score+=2;  // lowest note is home
       out.push({root,key,score,missing,covered,
                 size:SCALES[key].ivs.length, sig:scaleSig(root,key)});
     }
@@ -1058,7 +1090,7 @@ const S={
   keys:  {root:9, scale:'major', tab:'chords', sevenths:false, flat:null},
   find:  {mode:'chords', chords:[], notes:[], root:0, flat:null},
   songs: {list:[], openId:null, editing:false, addTo:null, root:0, flat:null, deleted:{},
-          tsel:null, scaleOpen:false, scalePick:1}
+          tsel:null, scaleOpen:false, scalePick:1, tabFull:null}
 };
 const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find','Find'],['songs','Songs']];
 
@@ -1071,7 +1103,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T20:38:16Z';
+const BUILT='2026-10-16T20:52:53Z';
 let deployed=null;
 
 function stampText(){
@@ -1388,6 +1420,12 @@ function render(){
   // every child node, which would silently drop the listeners below.
   stage.innerHTML += buildFooter();
   if(S.section==='songs') bindSongInputs();
+  if(S.songs.tabFull){
+    const on=stage.querySelector('.tfboard .tpos.on');
+    if(on && on.scrollIntoView) try{
+      on.scrollIntoView({block:'nearest', inline:'center'});
+    }catch(e){}
+  }
   stage.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
   stage.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
@@ -1443,7 +1481,16 @@ function render(){
     if(sec&&sec.tab){ sec.tab.cols+=8;
       sec.tab.cells.forEach(row=>{ while(row.length<sec.tab.cols) row.push(''); });
       saveSongs(); } });
-  bind('[data-tcell]', b=>{ S.songs.tsel = S.songs.tsel===b.dataset.tcell ? null : b.dataset.tcell; });
+  bind('[data-tcell]', b=>{
+    const key=b.dataset.tcell;
+    S.songs.tsel = S.songs.tsel===key ? null : key;
+    // entering a number needs the pad on screen, so take over the viewport
+    if(S.songs.tsel && S.songs.editing) S.songs.tabFull = key.split(':')[0];
+  });
+  bind('[data-tabfull]', b=>{ S.songs.tabFull=b.dataset.tabfull;
+    const sec=(openSong()||{sections:[]}).sections.find(x=>x.id===b.dataset.tabfull);
+    if(sec && !S.songs.tsel) S.songs.tsel=sec.id+':0:0'; });
+  bind('[data-tabclose]', ()=>{ S.songs.tabFull=null; S.songs.tsel=null; });
   bind('[data-tset]', b=>{
     const sel=S.songs.tsel; if(!sel) return;
     const v=b.dataset.tset;
@@ -1733,12 +1780,56 @@ function renderFind(){
 /* ==================================================================
    SONGS
    ================================================================== */
+/* Every note written into a tab, left to right. Row 0 is the high e, so it
+   maps to the LAST entry in TUNING, which runs low to high. */
+function songNotes(g){
+  const out=[];
+  for(const sec of g.sections){
+    if(!sec.tab) continue;
+    for(let c=0;c<sec.tab.cols;c++)
+      for(let r=0;r<6;r++){
+        const v=tabCell(sec.tab,r,c);
+        if(/^\d+$/.test(v)) out.push(pc(TUNING[5-r]+parseInt(v,10)));
+      }
+  }
+  return out;
+}
+
+/* Chords are far better evidence of a key than a melody is, so they lead.
+   Riff notes then nudge between the candidates the chords left tied -- and
+   if there are no chords at all, the riff answers on its own. */
 function songKey(g){
-  const all=[];
-  for(const sec of g.sections) for(const c of sec.chords) all.push(c);
-  if(all.length<2) return null;
-  const r=topDistinct(analyzeChords(all),1)[0];
-  return r?{root:r.root, scale:r.key, inKey:r.inKey, total:all.length}:null;
+  const chords=[];
+  for(const sec of g.sections) for(const c of sec.chords) chords.push(c);
+  const notes=songNotes(g);
+
+  if(chords.length>=2){
+    const res=analyzeChords(chords);
+    if(notes.length){
+      for(const r of res){
+        const set=SCALES[r.key].ivs.map(i=>pc(r.root+i));
+        const fit=notes.filter(x=>set.includes(x)).length;
+        r.score += (fit/notes.length)*9;          // how much of the riff it explains
+      }
+      res.sort((a,b)=>b.score-a.score);
+    }
+    const r=topDistinct(res,1)[0];
+    if(!r) return null;
+    const set=SCALES[r.key].ivs.map(i=>pc(r.root+i));
+    return {root:r.root, scale:r.key, inKey:r.inKey, total:chords.length,
+            from: notes.length?'both':'chords',
+            riffFit: notes.length?notes.filter(x=>set.includes(x)).length:0,
+            riffTotal: notes.length};
+  }
+
+  if(notes.length>=4){
+    const res=analyzeNotes(notes).filter(x=>SCALES[x.key].ivs.length===7);
+    const r=topDistinct(res,1)[0];
+    if(!r) return null;
+    return {root:r.root, scale:r.key, inKey:0, total:0, from:'riff',
+            riffFit:notes.length-r.missing.length, riffTotal:notes.length};
+  }
+  return null;
 }
 
 function renderSongs(){
@@ -1753,7 +1844,9 @@ function renderSongs(){
     : `<h1 class="title">${esc(g.name)}</h1>`;
   h+=`<p class="sub">`;
   h+= k ? `Sounds like <button class="linky" data-goroot="${k.root}" data-goscale="${k.scale}">${keyName(k.root,k.scale)} ${SCALES[k.scale].label}</button>`
-        : `Add a couple of chords and it will work out the key`;
+          + (k.from==='riff' ? ` <i class="from">from your riff alone</i>`
+            : k.from==='both' ? ` <i class="from">chords + riff</i>` : ``)
+        : `Add a couple of chords, or tab a riff, and it will work out the key`;
   h+=`</p>`;
   h+=`<div class="seg"><button data-cmd="all songs">All songs</button>`+
      `<button data-cmd="${ed?'done editing':'edit song'}" aria-pressed="${ed}">${ed?'Done':'Edit'}</button></div>`;
@@ -1808,23 +1901,27 @@ function renderSongs(){
   h+=`<p class="note">${ed
       ? 'Arrows reorder a section, × deletes it, and tapping the section name cycles Intro → Verse → Chorus and so on. Everything saves as you type.'
       : 'Tap any chord to see its shapes. Hit Edit to change the arrangement.'}</p>`;
+  const full = ed && S.songs.tabFull && g.sections.find(x=>x.id===S.songs.tabFull);
+  if(full) h+=tabFullscreen(full);
   stage.innerHTML=h;
 }
 
 /* A 6-string grid. Tapping a cell opens a number pad rather than the
    system keyboard -- far less painful with a guitar in your lap. */
-/* Identical layout in both modes; `editable` only adds tap targets. */
-function tabStaff(sec, editable){
+/* One system: the six string lines across a span of beats. */
+function tabSystem(sec, from, to, editable){
   const t=sec.tab, sel=editable?(S.songs.tsel||''):'';
-  let h=`<div class="tabwrap"><div class="tabed ${editable?'ed':'ro'}" style="--cols:${t.cols}">`;
+  const cols=to-from;
+  let h=`<div class="tabwrap"><div class="tabed ${editable?'ed':'ro'}" style="--cols:${cols}">`;
   h+=`<span class="tnum"></span>`;
-  for(let c=0;c<t.cols;c++)
+  for(let c=from;c<to;c++)
     h+=`<span class="tnum">${c%4===0?(c/4+1):''}</span>`;
   for(let r=0;r<6;r++){
     h+=`<span class="tstr">${TAB_STRINGS[r]}</span>`;
-    for(let c=0;c<t.cols;c++){
+    for(let c=from;c<to;c++){
       const key=sec.id+':'+r+':'+c, v=tabCell(t,r,c);
-      const cls='tpos'+(c&&c%4===0?' bar':'')+(v?' has':'')+(sel===key?' on':'');
+      // no bar line on the first beat of a system -- the staff edge is one
+      const cls='tpos'+(c>from && c%4===0?' bar':'')+(v?' has':'')+(sel===key?' on':'');
       const inner=v?`<b>${v}</b>`:'';
       h+= editable
         ? `<button class="${cls}" data-tcell="${key}" aria-label="string ${TAB_STRINGS[r]}, beat ${c+1}">${inner}</button>`
@@ -1834,10 +1931,51 @@ function tabStaff(sec, editable){
   return h+`</div></div>`;
 }
 
+/* Editing stays one continuous scrolling staff, because you need to see what
+   comes next while you type. Reading wraps every two bars, the way printed
+   tab does, so nothing runs off the side of the page. */
+const BARS_PER_LINE=2, BEATS_PER_BAR=4;
+function tabStaff(sec, editable){
+  const t=sec.tab;
+  if(editable) return tabSystem(sec,0,t.cols,true);
+  const per=BARS_PER_LINE*BEATS_PER_BAR;
+  let h='<div class="tabsystems">';
+  for(let from=0; from<t.cols; from+=per)
+    h+=tabSystem(sec, from, Math.min(from+per,t.cols), false);
+  return h+'</div>';
+}
+
+/* Fullscreen editing. The staff and the number pad both have to be on
+   screen at once, otherwise entering a note scrolls the pad out of reach. */
+function tabFullscreen(sec){
+  const sel=S.songs.tsel||'';
+  let h=`<div class="tabfull">
+    <div class="tfhead">
+      <b>${esc(sec.kind)}</b><span>tab</span>
+      <button data-tabclose="1">Done</button>
+    </div>
+    <div class="tfboard">${tabStaff(sec,true)}</div>
+    <div class="tfpad">`;
+  if(sel.split(':')[0]===sec.id){
+    h+=`<div class="numpad big">`;
+    for(let n=0;n<=15;n++) h+=`<button data-tset="${n}">${n}</button>`;
+    h+=`<button data-tset="x">× mute</button><button data-tset="">erase</button>`;
+    h+=`</div>`;
+  } else {
+    h+=`<p class="hint">Tap a position on the staff to start.</p>`;
+  }
+  h+=`<div class="tabtools">
+        <button data-tabcols="${sec.id}">+ 8 beats</button>
+        <button data-tabdel="${sec.id}">Remove tab</button>
+      </div>`;
+  return h+`</div></div>`;
+}
+
 function tabEditor(sec){
   const sel=S.songs.tsel||'';
   let h=tabStaff(sec,true);
   h+=`<div class="tabtools">
+        <button data-tabfull="${sec.id}">\u2922 Full screen</button>
         <button data-tabcols="${sec.id}">+ 8 beats</button>
         <button data-tabdel="${sec.id}">Remove tab</button>
       </div>`;
