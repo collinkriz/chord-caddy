@@ -1040,7 +1040,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-15T23:51:05Z';
+const BUILT='2026-10-16T00:07:52Z';
 let deployed=null;
 
 function stampText(){
@@ -1353,7 +1353,10 @@ function render(){
   else if(S.section==='find') renderFind();
   else if(S.section==='songs') renderSongs();
   else (S.keys.tab==='prog'?renderProg:renderKey)();
-  stage.innerHTML += buildFooter();   // before the listeners below are bound
+  // Append the footer BEFORE anything is bound: assigning innerHTML replaces
+  // every child node, which would silently drop the listeners below.
+  stage.innerHTML += buildFooter();
+  if(S.section==='songs') bindSongInputs();
   stage.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
   stage.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
@@ -1775,7 +1778,6 @@ function renderSongs(){
       ? 'Arrows reorder a section, × deletes it, and tapping the section name cycles Intro → Verse → Chorus and so on. Everything saves as you type.'
       : 'Tap any chord to see its shapes. Hit Edit to change the arrangement.'}</p>`;
   stage.innerHTML=h;
-  bindSongInputs();
 }
 
 /* A 6-string grid. Tapping a cell opens a number pad rather than the
@@ -1986,7 +1988,6 @@ function renderSongList(){
       ? 'Your songs live in GitHub as well as on this phone, so losing the phone costs you nothing.'
       : 'Saved on this device. Export writes a file you can keep somewhere safe.'}</p>`;
   stage.innerHTML=h;
-  bindSongInputs();
 }
 
 const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>
