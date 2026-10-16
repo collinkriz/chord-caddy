@@ -143,6 +143,28 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
 .tpos.on::after{content:''; position:absolute; inset:2px;
   border:1px solid var(--brass); border-radius:3px}
 .tabed.ro .tpos{cursor:default}
+
+/* Editing is a different job from reading, so it gets a different layout:
+   plain boxes you can actually hit with a thumb. Reading uses the staff
+   above, which looks like printed tab but has no obvious tap targets. */
+.tabgridwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:.5rem 0 .5rem;
+  border:1px solid var(--edge); border-radius:5px; background:var(--case-2); padding:.5rem}
+.tabcells{display:grid; grid-template-columns:1.45rem repeat(var(--cols),2.3rem);
+  gap:3px; width:max-content}
+.tbeat{display:flex; align-items:center; justify-content:center; height:1.1rem;
+  font-size:.66rem; color:var(--faint); font-variant-numeric:tabular-nums}
+.tbeat.bar{color:var(--brass)}
+.tcell{
+  height:2.3rem; min-width:2.3rem; padding:0; border:1px solid var(--edge);
+  border-radius:4px; background:var(--raise); color:var(--faint);
+  font-family:ui-monospace,Menlo,monospace; font-size:.9rem;
+  font-variant-numeric:tabular-nums;
+}
+.tcell.bar{border-left-color:var(--nickel)}
+.tcell.has{color:var(--bone); font-weight:600; border-color:var(--nickel);
+  background:#2A3A31}
+.tcell.on{border-color:var(--brass); background:rgba(224,172,68,.18); color:var(--brass)}
+.tcell:focus-visible{outline:2px solid var(--brass); outline-offset:1px}
 .tabtools{display:flex; gap:.4rem; margin-bottom:.4rem}
 .tabtools button{min-height:40px; padding:0 .75rem; font-size:.84rem; color:var(--nickel);
   border:1px dashed var(--edge); border-radius:5px}
@@ -1063,7 +1085,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T20:28:22Z';
+const BUILT='2026-10-16T20:32:04Z';
 let deployed=null;
 
 function stampText(){
@@ -1789,7 +1811,7 @@ function renderSongs(){
       h+=`<textarea class="sriff" data-stext="${sec.id}" rows="2"
             placeholder="notes, lyric cue…">${esc(sec.text||'')}</textarea>`;
     } else {
-      if(sec.tab && !tabIsEmpty(sec.tab)) h+=tabStaff(sec,false);
+      if(sec.tab && !tabIsEmpty(sec.tab)) h+=tabStaff(sec);
       if(sec.text) h+=`<pre class="riffout">${esc(sec.text)}</pre>`;
     }
     h+=`</div>`;
@@ -1805,18 +1827,33 @@ function renderSongs(){
 
 /* A 6-string grid. Tapping a cell opens a number pad rather than the
    system keyboard -- far less painful with a guitar in your lap. */
-function tabStaff(sec, editable){
-  const t=sec.tab, sel=editable?(S.songs.tsel||''):'';
-  let h=`<div class="tabwrap"><div class="tabed${editable?'':' ro'}" style="--cols:${t.cols}">`;
+/* Read-only: looks like printed tab. */
+function tabStaff(sec){
+  const t=sec.tab;
+  let h=`<div class="tabwrap"><div class="tabed ro" style="--cols:${t.cols}">`;
+  for(let r=0;r<6;r++){
+    h+=`<span class="tstr">${TAB_STRINGS[r]}</span>`;
+    for(let c=0;c<t.cols;c++){
+      const v=tabCell(t,r,c);
+      h+=`<span class="tpos${c&&c%4===0?' bar':''}">${v?`<b>${v}</b>`:''}</span>`;
+    }
+  }
+  return h+`</div></div>`;
+}
+
+/* Editable: plain boxes, one per string per beat. */
+function tabGrid(sec){
+  const t=sec.tab, sel=S.songs.tsel||'';
+  let h=`<div class="tabgridwrap"><div class="tabcells" style="--cols:${t.cols}">`;
+  h+=`<span class="tbeat"></span>`;
+  for(let c=0;c<t.cols;c++)
+    h+=`<span class="tbeat${c%4===0?' bar':''}">${c%4===0?(c/4+1):''}</span>`;
   for(let r=0;r<6;r++){
     h+=`<span class="tstr">${TAB_STRINGS[r]}</span>`;
     for(let c=0;c<t.cols;c++){
       const key=sec.id+':'+r+':'+c, v=tabCell(t,r,c);
-      const cls='tpos'+(c&&c%4===0?' bar':'')+(sel===key?' on':'');
-      const inner=v?`<b>${v}</b>`:'';
-      h+= editable
-        ? `<button class="${cls}" data-tcell="${key}" aria-label="string ${TAB_STRINGS[r]}, beat ${c+1}">${inner}</button>`
-        : `<span class="${cls}">${inner}</span>`;
+      const cls='tcell'+(c&&c%4===0?' bar':'')+(v?' has':'')+(sel===key?' on':'');
+      h+=`<button class="${cls}" data-tcell="${key}" aria-label="string ${TAB_STRINGS[r]}, beat ${c+1}">${v||''}</button>`;
     }
   }
   return h+`</div></div>`;
@@ -1824,7 +1861,7 @@ function tabStaff(sec, editable){
 
 function tabEditor(sec){
   const sel=S.songs.tsel||'';
-  let h=tabStaff(sec,true);
+  let h=tabGrid(sec);
   h+=`<div class="tabtools">
         <button data-tabcols="${sec.id}">+ 8 beats</button>
         <button data-tabdel="${sec.id}">Remove tab</button>
@@ -1835,8 +1872,8 @@ function tabEditor(sec){
     h+=`<button data-tset="x">×</button><button data-tset="">clear</button>`;
     h+=`<button class="done" data-tset="done">done</button></div>`;
   } else {
-    h+=`<p class="hint">Tap anywhere on a string line to put a fret number there.
-        The faint vertical lines mark every four beats.</p>`;
+    h+=`<p class="hint">Tap a box to put a fret number on that string. Numbers across
+        the top are bar numbers; leave a box empty to not play that string.</p>`;
   }
   return h;
 }
