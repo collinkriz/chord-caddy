@@ -275,6 +275,8 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
   margin:1.3rem 0 .5rem; letter-spacing:.06em; display:flex; align-items:baseline; gap:.5rem}
 .setname:first-of-type{margin-top:.2rem}
 .setname span{font-family:Barlow,sans-serif; font-weight:400; font-size:.82rem; color:var(--nickel); letter-spacing:0}
+.build{margin:1.6rem 0 .2rem; padding-top:.8rem; border-top:1px solid var(--edge);
+  font-size:.76rem; letter-spacing:.05em; color:var(--faint); text-align:center}
 .note{color:var(--dim); font-size:.9rem; line-height:1.5; margin:1.3rem 0 0; max-width:34rem}
 .note code{color:var(--bone); font-family:inherit; background:var(--raise); padding:0 .3rem; border-radius:3px}
 .empty{color:var(--bone); background:var(--raise); border:1px dashed var(--edge);
@@ -1033,6 +1035,37 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    can be recomputed; a song you wrote cannot. Home-screen web apps get their
    own storage that Safari's 7-day sweep leaves alone, but it is still only
    this device -- hence Export. */
+/* When was this actually deployed? The server knows: it serves index.html
+   with a Last-Modified header set to when the file landed. We ask it once
+   on boot. That is true whether the file arrived via a git push, a drag
+   onto Netlify, or anything else -- no build step required. The baked
+   time below is only a fallback for when the header is missing. */
+const BUILT='2026-10-15T23:51:05Z';
+let deployed=null;
+
+function stampText(){
+  const when=deployed||BUILT;
+  let out=when;
+  try{
+    out=new Date(when).toLocaleString(undefined,
+      {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  }catch(e){}
+  return (deployed?'Deployed ':'Built ')+out;
+}
+function buildFooter(){ return `<p class="build">${stampText()}</p>`; }
+
+async function readDeployTime(){
+  try{
+    const r=await fetch(location.href,{method:'HEAD',cache:'no-store'});
+    const lm=r.headers.get('Last-Modified');
+    if(!lm) return;
+    const d=new Date(lm);
+    if(isNaN(d.getTime())) return;
+    deployed=d.toISOString();
+    render();
+  }catch(e){ /* offline, or opened from a file -- keep the built time */ }
+}
+
 const STORE='chordcaddy.songs.v1';
 function saveSongs(){
   try{ localStorage.setItem(STORE,
@@ -1320,6 +1353,7 @@ function render(){
   else if(S.section==='find') renderFind();
   else if(S.section==='songs') renderSongs();
   else (S.keys.tab==='prog'?renderProg:renderKey)();
+  stage.innerHTML += buildFooter();   // before the listeners below are bound
   stage.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
   stage.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
@@ -2108,7 +2142,10 @@ if(SR){
 loadSongs();
 render();
 // pull from GitHub in the background; the app is already usable
-if(typeof fetch==='function') setTimeout(()=>syncNow(true),300);
+if(typeof fetch==='function'){
+  setTimeout(()=>syncNow(true),300);
+  readDeployTime();
+}
 </script>
 </body>
 </html>
