@@ -1,6 +1,52 @@
 {
   "songs": [
     {
+      "id": "smvqyculsck44",
+      "name": "Untitled",
+      "updated": 1793121722681,
+      "sections": [
+        {
+          "id": "smvqyculsfy2d",
+          "kind": "Intro",
+          "chords": [
+            {
+              "root": 9,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 4,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 2,
+              "type": "major",
+              "flat": false
+            },
+            {
+              "root": 4,
+              "type": "major",
+              "flat": false
+            }
+          ],
+          "text": ""
+        },
+        {
+          "id": "smvqyculsgdbf",
+          "kind": "Verse",
+          "chords": [],
+          "text": ""
+        },
+        {
+          "id": "smvqyculsy4gl",
+          "kind": "Chorus",
+          "chords": [],
+          "text": ""
+        }
+      ]
+    },
+    {
       "id": "smvbezg2fuv93",
       "name": "Riff song",
       "updated": 1792184722482,
