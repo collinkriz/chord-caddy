@@ -1115,17 +1115,17 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-10-16T21:03:02Z';
+const BUILT='2026-11-07T04:45:23Z';
 let deployed=null;
 
 function stampText(){
   const when=deployed||BUILT;
   let out=when;
   try{
-    out=new Date(when).toLocaleString(undefined,
-      {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    out=new Date(when).toLocaleString('en-US',
+      {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Detroit',timeZoneName:'short'});
   }catch(e){}
-  return (deployed?'Deployed ':'Built ')+out;
+  return 'Last updated '+out;
 }
 function buildFooter(){ return `<p class="build">${stampText()}</p>`; }
 
