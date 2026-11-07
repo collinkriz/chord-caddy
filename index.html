@@ -313,6 +313,18 @@ button.kind{border:1px solid var(--edge); border-radius:5px; min-height:40px; pa
   border:1px solid var(--edge); border-radius:5px; background:var(--raise); padding:.6rem;
 }
 .mapwrap svg{display:block; height:auto}
+.mapwrap.tapfull{cursor:zoom-in}
+.fullbtn{display:block; margin:8px 0 0 auto; background:none; border:1px solid var(--nickel); color:var(--bone); border-radius:999px; padding:6px 14px; font:inherit; font-size:.82rem; opacity:.85}
+html.sf-open, html.sf-open body{overflow:hidden}
+.scalefull{position:fixed; inset:0; z-index:9999; background:var(--case-2); display:flex; flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 10px) calc(env(safe-area-inset-left) + 12px)}
+.sfhead{display:flex; align-items:center; gap:10px; color:var(--bone); padding:4px 2px 10px}
+.sfhead b{flex:1; font-size:1.1rem}
+.sfhead em{color:var(--brass); font-style:normal}
+.sfhead button{background:var(--case); color:var(--bone); border:1px solid var(--nickel); border-radius:999px; padding:7px 14px; font:inherit; font-size:.85rem}
+.sfhead button[data-sfclose]{background:var(--brass); color:#1B2621; border-color:var(--brass); font-weight:700}
+.sfboard{flex:1; min-height:0; display:flex; align-items:center; justify-content:center}
+.sfboard svg{width:100%; height:100%; max-height:100%}
 
 /* ---------- key palette & progressions ---------- */
 .pills{display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1.2rem}
@@ -956,6 +968,65 @@ function fretboardSVG(rootPc, ivs, showDegrees, maxFret, spell){
   return s+'</svg>';
 }
 
+/* Vertical neck for full screen in portrait: nut at the top, low E on the
+   left, so the dots get big and every label stays upright. */
+function fretboardVSVG(rootPc, ivs, showDegrees, maxFret, spell){
+  const FR=maxFret||15, colW=46, L=30, T=56, rowH=50, W=L+5*colW+52, H=T+FR*rowH+10;
+  const set=ivs.map(i=>pc(rootPc+i));
+  let s=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img">`;
+  s+=`<rect x="${L-10}" y="${T}" width="${5*colW+20}" height="${FR*rowH}" fill="var(--board)" rx="3"/>`;
+  [3,5,7,9,15,21].filter(f=>f<=FR).forEach(f=>{ s+=`<circle cx="${L+2.5*colW}" cy="${T+(f-0.5)*rowH}" r="5" fill="var(--board-hi)"/>`; });
+  [12,24].filter(f=>f<=FR).forEach(f=>{ [1.5,3.5].forEach(k=>{ s+=`<circle cx="${L+k*colW}" cy="${T+(f-0.5)*rowH}" r="5" fill="var(--board-hi)"/>`; }); });
+  for(let f=0;f<=FR;f++){
+    const y=T+f*rowH;
+    s+=`<line x1="${L-10}" y1="${y}" x2="${L+5*colW+10}" y2="${y}" stroke="${f===0?'var(--nut)':'var(--nickel)'}" stroke-width="${f===0?4:1.4}" opacity="${f===0?1:.5}"/>`;
+    if(f>0) s+=`<text x="${L+5*colW+36}" y="${y-rowH/2+4}" font-size="12" fill="var(--nickel)" text-anchor="middle">${f}</text>`;
+  }
+  for(let i=0;i<6;i++){
+    const x=L+i*colW;
+    s+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${T+FR*rowH}" stroke="var(--nickel)" stroke-width="${0.8+(5-i)*0.22}" opacity=".6"/>`;
+    s+=`<text x="${x}" y="14" font-size="13" fill="var(--nickel)" text-anchor="middle">${STRINGS[i]}</text>`;
+    for(let f=0;f<=FR;f++){
+      const p=pc(TUNING[i]+f);
+      if(!set.includes(p)) continue;
+      const y=f===0?T-20:T+(f-0.5)*rowH, r=f===0?11:16;
+      const isRoot=p===rootPc;
+      const lbl=showDegrees?DEG[pc(p-rootPc)]:((spell&&spell[p])||nn(p));
+      s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${isRoot?'var(--brass)':'var(--raise)'}" stroke="${isRoot?'var(--brass)':'var(--bone)'}" stroke-width="1.3"/>`;
+      s+=`<text x="${x}" y="${y+(f===0?3.5:5)}" font-size="${f===0?9:14}" font-weight="600" text-anchor="middle" fill="${isRoot?'#1B2621':'var(--bone)'}">${lbl}</text>`;
+    }
+  }
+  return s+'</svg>';
+}
+
+/* Full-screen scale map. Lives outside #stage so re-renders never touch it. */
+let scaleFS=null;
+function drawScaleFull(){
+  if(!scaleFS) return;
+  const c=S.scales, sc=SCALES[c.scale], spell=scaleSpellMap(c.root,c.scale);
+  const tall=innerHeight>innerWidth;
+  scaleFS.className='scalefull'+(tall?' tall':' wide');
+  scaleFS.innerHTML=`<div class="sfhead"><b>${nn(c.root)} <em>${sc.label}</em></b>
+      <button data-sfdeg="1">${c.degrees?'Show notes':'Show degrees'}</button>
+      <button data-sfclose="1">Done</button></div>
+    <div class="sfboard">${tall?fretboardVSVG(c.root,sc.ivs,c.degrees,c.maxFret,spell):fretboardSVG(c.root,sc.ivs,c.degrees,c.maxFret,spell)}</div>`;
+}
+function openScaleFull(){
+  scaleFS=document.createElement('div'); document.body.appendChild(scaleFS);
+  document.documentElement.classList.add('sf-open'); drawScaleFull();
+}
+function closeScaleFull(){
+  if(scaleFS){ scaleFS.remove(); scaleFS=null; }
+  document.documentElement.classList.remove('sf-open');
+}
+document.addEventListener('click', e=>{
+  if(e.target.closest('[data-scalefull]')){ openScaleFull(); return; }
+  if(e.target.closest('[data-sfclose]')){ closeScaleFull(); return; }
+  if(e.target.closest('[data-sfdeg]')){ S.scales.degrees=!S.scales.degrees; drawScaleFull(); if(typeof render==='function') render(); }
+});
+addEventListener('resize', ()=>{ if(scaleFS) drawScaleFull(); });
+addEventListener('keydown', e=>{ if(e.key==='Escape') closeScaleFull(); });
+
 /* ==================================================================
    3. PARSING what you said
    ================================================================== */
@@ -1115,7 +1186,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-11-07T04:45:23Z';
+const BUILT='2026-11-07T05:11:49Z';
 let deployed=null;
 
 function stampText(){
@@ -1615,7 +1686,8 @@ function renderScale(){
     <p class="sub">${sc.ivs.length} notes &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
     ${seg(SCALE_SEG, c.degrees)}
     ${keyPicker(c, SCALE_MODES)}
-    <div class="mapwrap">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret, scaleSpellMap(c.root,c.scale))}</div>
+    <div class="mapwrap tapfull" data-scalefull="1" role="button" aria-label="Show fretboard full screen">${fretboardSVG(c.root, sc.ivs, c.degrees, c.maxFret, scaleSpellMap(c.root,c.scale))}</div>
+    <button class="fullbtn" data-scalefull="1">\u2922 Full screen</button>
     ${vibeHTML(VIBE[c.scale])}
     <p class="note">Scroll sideways for the rest of the neck. Gold is the root.
        Degrees show each note's number in the scale, which is what makes the shape
