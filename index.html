@@ -63,6 +63,48 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 }
 .tabs button[aria-current="true"]{color:var(--brass); border-bottom-color:var(--brass)}
 .tabs button:focus-visible{outline:2px solid var(--brass); outline-offset:-3px}
+.searchbtn{border-right:none; border-left:1px solid var(--edge)}
+.searchbtn svg{stroke:var(--brass); stroke-width:2; fill:none; stroke-linecap:round}
+
+/* ---------- three-step chord picker: note, sharp/flat, type ---------- */
+.cpick{margin:0 0 1.15rem; display:flex; flex-direction:column; gap:.34rem}
+.cprow{display:flex; gap:.28rem}
+.cprow .keybtn{flex:1 1 0; min-width:0}
+.cprow .keybtn[disabled]{opacity:.28; cursor:default}
+.cprow.acc .keybtn{font-size:1.25rem}
+.cprow.types{overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  margin:0 -1rem; padding:0 1rem}
+.cprow.types::-webkit-scrollbar{display:none}
+.cprow.types .keybtn{flex:0 0 auto; padding:0 .8rem; font-family:Barlow,sans-serif;
+  font-weight:500; font-size:.88rem}
+.cplabel{font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--faint);
+  margin:.2rem 0 -.05rem}
+
+/* ---------- chord search ---------- */
+html.srch-open, html.srch-open body{overflow:hidden}
+.srch{position:fixed; inset:0; z-index:90; display:flex; flex-direction:column;
+  background:var(--case-2);
+  padding:calc(env(safe-area-inset-top) + .6rem) 0 env(safe-area-inset-bottom)}
+.srch[hidden]{display:none}
+.srchbar{display:flex; gap:.5rem; align-items:center; padding:0 1rem .7rem;
+  border-bottom:1px solid var(--edge)}
+.srchbar input{flex:1; min-width:0; background:var(--raise); color:var(--bone);
+  border:1px solid var(--brass); border-radius:6px; padding:.7rem .8rem;
+  font:inherit; font-size:1.15rem}
+.srchbar input:focus{outline:none}
+.srchbar input::placeholder{color:var(--faint)}
+.srchbar button{min-height:44px; padding:0 .4rem; color:var(--brass); font-size:.95rem}
+.srchlist{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:.3rem 0}
+.srow{display:flex; width:100%; align-items:baseline; gap:.8rem; text-align:left;
+  padding:.65rem 1rem; border-bottom:1px solid var(--edge)}
+.srow:first-child{background:var(--raise)}
+.srow b{font-family:"Barlow Condensed",Barlow,sans-serif; font-weight:600; font-size:1.6rem;
+  min-width:5.2rem; color:var(--bone); line-height:1.1}
+.srow b em{font-style:normal; color:var(--brass)}
+.srow span{font-size:.88rem; color:var(--dim)}
+.srow span i{display:block; font-style:normal; color:var(--nickel); font-size:.82rem}
+.srchhint{padding:1rem; color:var(--nickel); font-size:.92rem; line-height:1.55}
+.srchhint code{color:var(--bone); background:var(--raise); padding:0 .3rem; border-radius:3px; font-family:inherit}
 
 .picker{margin:0 0 1.15rem}
 .keyrow{display:flex; flex-wrap:wrap; gap:.28rem; margin-bottom:.34rem}
@@ -409,6 +451,19 @@ html.sf-open, html.sf-open body{overflow:hidden}
     </svg>
   </button>
   <nav class="tabs" id="tabs" aria-label="Section"></nav>
+  <button id="searchbtn" class="backbtn searchbtn" aria-label="Search chords">
+    <svg viewBox="0 0 20 20" width="19" height="19" aria-hidden="true">
+      <circle cx="8.5" cy="8.5" r="6"/><line x1="13" y1="13" x2="18" y2="18"/>
+    </svg>
+  </button>
+</div>
+<div class="srch" id="srch" hidden role="dialog" aria-label="Search chords">
+  <div class="srchbar">
+    <input id="srchq" type="search" autocomplete="off" autocapitalize="off" autocorrect="off"
+           spellcheck="false" enterkeyhint="go" placeholder="Type a chord: D#m, Bb7, f sharp minor">
+    <button id="srchx">Cancel</button>
+  </div>
+  <div class="srchlist" id="srchlist"></div>
 </div>
 
 <main class="stage" id="stage"></main>
@@ -1186,7 +1241,7 @@ const SECTIONS=[['chords','Chords'],['scales','Scales'],['keys','Keys'],['find',
    on boot. That is true whether the file arrived via a git push, a drag
    onto Netlify, or anything else -- no build step required. The baked
    time below is only a fallback for when the header is missing. */
-const BUILT='2026-11-07T05:11:49Z';
+const BUILT='2026-11-19T20:19:02Z';
 let deployed=null;
 
 function stampText(){
@@ -1367,7 +1422,15 @@ const tabs=document.getElementById('tabs');
 // null means "spell it however this key is normally written"; true/false
 // mean the reader asked for it outright, and that always wins
 function setSpelling(c){
-  useFlats = (c.flat===null || c.flat===undefined) ? FLATKEYS.includes(c.root) : c.flat;
+  if(c.flat!==null && c.flat!==undefined){ useFlats=c.flat; return; }
+  // Guitarists say Eb but D#m, Ab but G#m, so minor-family chords on those
+  // three notes lean sharp unless you asked for the flat outright.
+  if(c===S.chords && isMinorish(c.chord) && [1,3,8].includes(c.root)){ useFlats=false; return; }
+  useFlats = FLATKEYS.includes(c.root);
+}
+function isMinorish(type){
+  const iv=(CHORDS[type]||CHORDS.major).ivs;
+  return iv.includes(3) && !iv.includes(4);
 }
 function chordName(rootPc,type){ return nn(rootPc)+CHORDS[type].sym; }
 
@@ -1493,6 +1556,35 @@ function keyPicker(c, modes){
   return h+'</div></div>';
 }
 
+/* Pick a chord the way you'd say it: the letter, then sharp or flat,
+   then what kind. E#, B#, Cb and Fb are greyed out -- nobody plays them. */
+const PICK_LETTERS=['A','B','C','D','E','F','G'];
+const PICK_TYPES=['major','minor','7','m7','maj7','sus2','sus4','add9','6','m6','9',
+  'dim','dim7','aug','m7b5','5','7sus4','madd9','maj9','m9','mMaj7','11','13','7b9','7sharp9'];
+const TRIAD_TYPES=['major','minor','dim','aug','sus2','sus4'];
+const typeLabel=t=>t==='major'?'Major':t==='minor'?'Minor':CHORDS[t].sym;
+const badAcc=(L,a)=>(a==='#'&&(L==='E'||L==='B'))||(a==='b'&&(L==='C'||L==='F'));
+function pickParts(c){ const n=nn(c.root); return {L:n[0], a:n.slice(1)}; }
+function chordPicker(c, triad){
+  const {L,a}=pickParts(c), cur=triad?(TRIAD_OF[c.chord]||'major'):c.chord;
+  let h='<div class="cpick"><div class="cprow">';
+  for(const x of PICK_LETTERS)
+    h+=`<button class="keybtn" data-pletter="${x}" aria-pressed="${x===L}">${x}</button>`;
+  h+='</div><div class="cprow acc">';
+  for(const [v,lab] of [['b','\u266D'],['','\u266E'],['#','\u266F']])
+    h+=`<button class="keybtn" data-pacc="${v}" aria-pressed="${v===a}" ${badAcc(L,v)?'disabled':''}>${lab}</button>`;
+  h+='</div><div class="cprow types">';
+  for(const t of (triad?TRIAD_TYPES:PICK_TYPES))
+    h+=`<button class="keybtn" data-ptype="${t}" aria-pressed="${t===cur}">${typeLabel(t)}</button>`;
+  return h+'</div></div>';
+}
+function pickSet(c, L, a){
+  if(badAcc(L,a)) a='';
+  c.root=pc(LETTER_PC[LETTERS.indexOf(L)]+(a==='#'?1:a==='b'?-1:0));
+  c.flat= a==='b'?true : a==='#'?false : null;
+  c.posIdx=0;
+}
+
 function seg(options, active, cmdAttr){
   return '<div class="seg">'+options.map(([val,label,cmd])=>
     `<button data-cmd="${cmd}" aria-pressed="${val===active}">${label}</button>`).join('')+'</div>';
@@ -1521,6 +1613,12 @@ function render(){
   qa('[data-cmd]').forEach(b=>b.addEventListener('click',()=>run(b.dataset.cmd)));
   qa('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
+  qa('[data-pletter]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+    const c=S.chords; pickSet(c, b.dataset.pletter, pickParts(c).a); })));
+  qa('[data-pacc]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+    const c=S.chords; pickSet(c, pickParts(c).L, b.dataset.pacc); })));
+  qa('[data-ptype]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
+    const c=S.chords; c.chord=b.dataset.ptype; c.sticky=true; })));
   qa('[data-mode]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     cur().scale=b.dataset.mode; })));
   qa('[data-fadd]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
@@ -1628,7 +1726,7 @@ function renderChord(){
   let h=`<p class="kicker">${kick}</p><h1 class="title">${nn(c.root)}<em>${spec.sym}</em></h1>
          <p class="sub">${spec.label} &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
          ${seg(CHORD_SEG,'full')}
-         <div class="picker">${rootRow(c, CHORD_KEYS)}</div>`;
+         ${chordPicker(c,false)}`;
   if(!vs.length){
     h+=`<div class="empty">Nothing playable that far up. Try <code>lower</code>,
         or raise the ceiling with <code>up to fret 19</code>.</div>`;
@@ -1656,7 +1754,7 @@ function renderTriad(){
   let h=`<p class="kicker">${kick}</p><h1 class="title">${nn(c.root)}<em>${spec.sym}</em> triads</h1>
          <p class="sub">${spec.label} &nbsp;\u00B7&nbsp; <b>${notes}</b></p>
          ${seg(CHORD_SEG,'triad')}
-         <div class="picker">${rootRow(c, CHORD_KEYS)}</div>`;
+         ${chordPicker(c,true)}`;
   const shown=c.set===null?[0,1,2,3]:[c.set];
   let any=false;
   for(const si of shown){
@@ -2428,6 +2526,102 @@ if(SR){
   rec.onerror=()=>{ on=false; mic.classList.remove('on'); };
   rec.onresult=e=>{ run(e.results[0][0].transcript); };
 }
+
+/* ==================================================================
+   8. CHORD SEARCH -- suggestions as you type
+   ================================================================== */
+const SROOTS=[['C',0],['C#',1],['Db',1],['D',2],['D#',3],['Eb',3],['E',4],['F',5],['F#',6],
+  ['Gb',6],['G',7],['G#',8],['Ab',8],['A',9],['A#',10],['Bb',10],['B',11]];
+// the less usual spelling of each black key sorts a touch lower
+const RARE_SPELL={'Db':1,'D#':0,'Gb':1,'G#':0,'A#':1,'Ab':0,'Eb':0,'C#':0,'F#':0,'Bb':0};
+const SALIAS={
+  major:['','maj','major'], minor:['m','min','minor','-'],
+  '7':['7','7th','dom7','dominant','dominant7','seven','seventh'],
+  m7:['m7','min7','minor7','minor7th','-7'], maj7:['maj7','major7','major7th','ma7'],
+  sus2:['sus2','suspended2'], sus4:['sus4','sus','suspended','suspended4'],
+  add9:['add9','add'], '6':['6','6th','major6','six'], m6:['m6','min6','minor6'],
+  '9':['9','9th','dom9','nine'], dim:['dim','diminished','o'], dim7:['dim7','diminished7','o7'],
+  aug:['aug','augmented','+'], m7b5:['m7b5','halfdim','halfdiminished','ø'],
+  '5':['5','power','powerchord'], '7sus4':['7sus4','7sus'], madd9:['madd9','minadd9','minoradd9'],
+  maj9:['maj9','major9'], m9:['m9','min9','minor9'], mMaj7:['mmaj7','minmaj7','minormajor7'],
+  '11':['11','11th'], '13':['13','13th'], '7b9':['7b9','7flat9'], '7sharp9':['7#9','7sharp9','hendrix']
+};
+function snorm(t){
+  return t.toLowerCase().replace(/\u266F/g,'#').replace(/\u266D/g,'b')
+    .replace(/\bsharp\b/g,'#').replace(/\bflat\b/g,'b').replace(/\bchords?\b/g,'')
+    .replace(/[\s.,]/g,'');
+}
+function suggest(text){
+  const q=snorm(text); if(!q) return [];
+  const out=[];
+  for(const [name,p] of SROOTS){
+    const r=name.toLowerCase();
+    if(!q.startsWith(r)) continue;
+    const rest=q.slice(r.length);
+    PICK_TYPES.forEach((t,rank)=>{
+      let best=null;
+      for(const a of SALIAS[t]){
+        if(a===rest){ best=0; break; }
+        if(rest==='m' && a.startsWith('ma')) continue;   // "Cm" means minor, not Cmaj
+        if(a.startsWith(rest) && best===null) best=1;
+      }
+      if(best===null) return;
+      out.push({name, root:p, type:t, score:best*100+rank+(RARE_SPELL[name]||0)*.5});
+    });
+  }
+  out.sort((x,y)=>x.score-y.score);
+  return out.slice(0,10);
+}
+const srch=document.getElementById('srch'), srchq=document.getElementById('srchq'),
+      srchlist=document.getElementById('srchlist');
+let sres=[];
+function drawSuggestions(){
+  sres=suggest(srchq.value);
+  const keep=useFlats;
+  if(!srchq.value.trim()){
+    srchlist.innerHTML=`<div class="srchhint">Start typing and pick from the list.<br>
+      <code>d#m</code> &nbsp;<code>bb7</code> &nbsp;<code>f sharp minor</code> &nbsp;<code>cmaj7</code> &nbsp;<code>g sus</code></div>`;
+    return;
+  }
+  if(!sres.length){
+    srchlist.innerHTML='<div class="srchhint">No chord by that name. Start with the note: <code>a</code>, <code>c#</code>, <code>eb</code>&hellip;</div>';
+    return;
+  }
+  srchlist.innerHTML=sres.map((r,i)=>{
+    useFlats=r.name.includes('b');
+    const spec=CHORDS[r.type], sp=chordSpelling(r.root,r.type);
+    const notes=spec.ivs.map(x=>spellAs(sp,r.root+x)).join(' ');
+    return `<button class="srow" data-sres="${i}"><b>${r.name}<em>${spec.sym}</em></b>
+      <span>${spec.label}<i>${notes}</i></span></button>`;
+  }).join('');
+  useFlats=keep;
+  srchlist.querySelectorAll('[data-sres]').forEach(b=>b.addEventListener('click',()=>pickSuggestion(sres[+b.dataset.sres])));
+}
+function openSearch(){
+  srch.hidden=false; document.documentElement.classList.add('srch-open');
+  srchq.value=''; drawSuggestions(); srchq.focus();
+}
+function closeSearch(){
+  srch.hidden=true; document.documentElement.classList.remove('srch-open'); srchq.blur();
+}
+function pickSuggestion(r){
+  if(!r) return;
+  closeSearch();
+  commit(()=>{
+    const c=S.chords;
+    S.section='chords';
+    if(c.mode==='triad' && !TRIAD_OF[r.type]) c.mode='full';
+    c.root=r.root; c.chord=r.type; c.sticky=true; c.posIdx=0;
+    c.flat = r.name.length>1 ? r.name[1]==='b' : null;
+  });
+}
+document.getElementById('searchbtn').addEventListener('click',openSearch);
+document.getElementById('srchx').addEventListener('click',closeSearch);
+srchq.addEventListener('input',drawSuggestions);
+srchq.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ e.preventDefault(); pickSuggestion(sres[0]); }
+  if(e.key==='Escape') closeSearch();
+});
 
 loadSongs();
 render();
