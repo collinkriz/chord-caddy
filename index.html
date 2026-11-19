@@ -1549,8 +1549,10 @@ function rootRow(c, list){
     h+=`<button class="keybtn" data-key="${p}" data-flat="${flat}" aria-pressed="${c.root===p}">${label}</button>`;
   return h+'</div>';
 }
+// Scales and Keys use the same three short rows as Chords: letter,
+// sharp/flat, then one sideways-scrolling row of modes.
 function keyPicker(c, modes){
-  let h='<div class="picker">'+rootRow(c, KEYNAMES)+'<div class="keyrow modes">';
+  let h='<div class="cpick">'+letterRows(c)+'<div class="cprow types">';
   for(const [val,label] of modes)
     h+=`<button class="keybtn" data-mode="${val}" aria-pressed="${c.scale===val}">${label}</button>`;
   return h+'</div></div>';
@@ -1565,15 +1567,19 @@ const TRIAD_TYPES=['major','minor','dim','aug','sus2','sus4'];
 const typeLabel=t=>t==='major'?'Major':t==='minor'?'Minor':CHORDS[t].sym;
 const badAcc=(L,a)=>(a==='#'&&(L==='E'||L==='B'))||(a==='b'&&(L==='C'||L==='F'));
 function pickParts(c){ const n=nn(c.root); return {L:n[0], a:n.slice(1)}; }
-function chordPicker(c, triad){
-  const {L,a}=pickParts(c), cur=triad?(TRIAD_OF[c.chord]||'major'):c.chord;
-  let h='<div class="cpick"><div class="cprow">';
+function letterRows(c){
+  const {L,a}=pickParts(c);
+  let h='<div class="cprow">';
   for(const x of PICK_LETTERS)
     h+=`<button class="keybtn" data-pletter="${x}" aria-pressed="${x===L}">${x}</button>`;
   h+='</div><div class="cprow acc">';
   for(const [v,lab] of [['b','\u266D'],['','\u266E'],['#','\u266F']])
     h+=`<button class="keybtn" data-pacc="${v}" aria-pressed="${v===a}" ${badAcc(L,v)?'disabled':''}>${lab}</button>`;
-  h+='</div><div class="cprow types">';
+  return h+'</div>';
+}
+function chordPicker(c, triad){
+  const cur=triad?(TRIAD_OF[c.chord]||'major'):c.chord;
+  let h='<div class="cpick">'+letterRows(c)+'<div class="cprow types">';
   for(const t of (triad?TRIAD_TYPES:PICK_TYPES))
     h+=`<button class="keybtn" data-ptype="${t}" aria-pressed="${t===cur}">${typeLabel(t)}</button>`;
   return h+'</div></div>';
@@ -1582,7 +1588,7 @@ function pickSet(c, L, a){
   if(badAcc(L,a)) a='';
   c.root=pc(LETTER_PC[LETTERS.indexOf(L)]+(a==='#'?1:a==='b'?-1:0));
   c.flat= a==='b'?true : a==='#'?false : null;
-  c.posIdx=0;
+  if(c===S.chords) c.posIdx=0;
 }
 
 function seg(options, active, cmdAttr){
@@ -1614,9 +1620,9 @@ function render(){
   qa('[data-key]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=cur(); c.root=+b.dataset.key; c.flat=b.dataset.flat==='1'; })));
   qa('[data-pletter]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
-    const c=S.chords; pickSet(c, b.dataset.pletter, pickParts(c).a); })));
+    const c=cur(); pickSet(c, b.dataset.pletter, pickParts(c).a); })));
   qa('[data-pacc]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
-    const c=S.chords; pickSet(c, pickParts(c).L, b.dataset.pacc); })));
+    const c=cur(); pickSet(c, pickParts(c).L, b.dataset.pacc); })));
   qa('[data-ptype]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
     const c=S.chords; c.chord=b.dataset.ptype; c.sticky=true; })));
   qa('[data-mode]').forEach(b=>b.addEventListener('click',()=>commit(()=>{
@@ -2441,20 +2447,12 @@ function buildTabs(){
 
 /* ---------- quick buttons, per view ---------- */
 const CHIPSETS={
-  chord:[['Major','major'],['Minor','minor'],['7th','7'],['m7','m7'],['maj7','maj7'],
-         ['6th','6'],['sus2','sus2'],['sus4','sus4'],['add9','add9'],['9th','9'],
-         ['dim','dim'],['dim7','dim7'],['aug','aug'],['m7b5','m7b5'],['5','power chord'],
-         ['Up to 19','up to fret 19'],['Whole neck','whole neck']],
-  triad:[['All sets','all strings'],['Top strings','top strings'],['Middle','middle strings'],
-         ['Major','major triads'],['Minor','minor triads'],['dim','dim triads'],
-         ['aug','aug triads'],['sus2','sus2 triads'],['sus4','sus4 triads']],
-  scale:[['Major','major scale'],['Minor','minor scale'],['Mixolydian','mixolydian'],
-         ['Dorian','dorian'],['Pentatonic','minor pentatonic'],['Blues','blues'],
-         ['Whole neck','whole neck']],
-  key:[['Sevenths','sevenths'],['Triads','triads in key'],['Major','major'],['Minor','minor'],
-       ['Mixolydian','mixolydian'],['Dorian','dorian']],
-  prog:[['Major','major'],['Minor','minor'],['Mixolydian','mixolydian'],['Dorian','dorian'],
-        ['Sevenths','sevenths']],
+  // the pickers on each page cover note and type, so these are only extras
+  chord:[['Up to fret 19','up to fret 19'],['Whole neck','whole neck']],
+  triad:[['All sets','all strings'],['Top strings','top strings'],['Middle','middle strings']],
+  scale:[['Whole neck','whole neck'],['Up to fret 19','up to fret 19']],
+  key:[['Sevenths','sevenths'],['Triads','triads in key']],
+  prog:[['Sevenths','sevenths'],['Triads','triads in key']],
   find:[['Chords','find chords'],['Notes','find notes'],['Clear','clear']],
   songs:[['New song','new song']]
 };
