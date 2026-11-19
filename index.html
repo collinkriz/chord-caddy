@@ -1224,7 +1224,7 @@ function parse(text, st){
 const S={
   section:'chords',
   chords:{root:9, chord:'major', mode:'full', count:4, posIdx:0, maxFret:15, set:null, sticky:false, flat:null},
-  scales:{root:9, scale:'major', maxFret:15, degrees:false, flat:null},
+  scales:{root:9, scale:'minor pentatonic', maxFret:15, degrees:false, flat:null},
   keys:  {root:9, scale:'major', tab:'chords', sevenths:false, flat:null},
   find:  {mode:'chords', chords:[], notes:[], root:0, flat:null},
   songs: {list:[], openId:null, editing:false, addTo:null, root:0, flat:null, deleted:{},
@@ -1467,12 +1467,14 @@ function apply(p){
 const KEYNAMES=[['C',0,0],['D\u266D',1,1],['D',2,0],['E\u266D',3,1],['E',4,0],['F',5,1],
                 ['F\u266F',6,0],['G',7,0],['A\u266D',8,1],['A',9,0],['B\u266D',10,1],['B',11,0]];
 // only seven note scales stack into a chord family
-const KEY_MODES=[['major','Major'],['minor','Minor'],['dorian','Dorian'],['mixolydian','Mixolydian'],
-                 ['lydian','Lydian'],['phrygian','Phrygian'],['locrian','Locrian'],
-                 ['harmonic minor','Harmonic min'],['melodic minor','Melodic min']];
-const SCALE_MODES=KEY_MODES.concat([['major pentatonic','Major pent'],
-                 ['minor pentatonic','Minor pent'],['major blues','Major blues'],
-                 ['blues','Blues']]);
+// Ordered by how often a rock player actually reaches for them
+const KEY_MODES=[['major','Major'],['minor','Minor'],['mixolydian','Mixolydian'],['dorian','Dorian'],
+                 ['harmonic minor','Harmonic min'],['phrygian','Phrygian'],['lydian','Lydian'],
+                 ['melodic minor','Melodic min'],['locrian','Locrian']];
+const SCALE_MODES=[['minor pentatonic','Minor pent'],['blues','Blues'],['major pentatonic','Major pent'],
+                 ['major','Major'],['minor','Minor'],['mixolydian','Mixolydian'],['dorian','Dorian'],
+                 ['major blues','Major blues'],['harmonic minor','Harmonic min'],['phrygian','Phrygian'],
+                 ['lydian','Lydian'],['melodic minor','Melodic min'],['locrian','Locrian']];
 
 /* Spell a chord's notes by stacking letters, the way the chord is actually
    built: C7 is C-E-G-Bb because the 7th must be a B of some kind, never an
