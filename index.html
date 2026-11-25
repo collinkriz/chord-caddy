@@ -1160,12 +1160,23 @@ function findRoot(t){
   return best;
 }
 function parse(text, st){
-  const t=' '+text.toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ')+' ';
+  let t=' '+text.toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ')+' ';
   const out={};
+
+  // string sets named by their letters -- "dgb", "d g b", "D-G-B strings".
+  // Pulled out first so the A in "a d g" is never heard as a root note.
+  const SET_BY_LETTERS={gbe:0,dgb:1,adg:2,ead:3};
+  const sl=t.match(/ ([eadgb])[\s\-\/]?([eadgb])[\s\-\/]?([eadgb])(?= |strings?\b)( strings?\b)?/);
+  if(sl){
+    const key=[sl[1],sl[2],sl[3]].join('');
+    const rev=[sl[3],sl[2],sl[1]].join('');
+    const idx=SET_BY_LETTERS[key]??SET_BY_LETTERS[rev];
+    if(idx!==undefined){ out.set=idx; t=t.replace(sl[0],' '); if(!/\b(scale|mode|key|progression)/.test(t)) out.view='triad'; }
+  }
 
   // --- relative moves keep the current subject ---
   if(/\b(higher|further up|up the neck|up higher|move up|octave up|up an octave)\b/.test(t)) out.move=1;
-  if(/\b(lower|further down|down the neck|back down|move down|octave down)\b/.test(t)) out.move=-1;
+  if(/\b(lower(?! middle)|further down|down the neck|back down|move down|octave down)\b/.test(t)) out.move=-1;
   if(/\b(open position|at the nut|to the nut|first position|start over)\b/.test(t)) out.reset=true;
   if(/\b(more|other|another|different|extra)\b.*\b(option|shape|voicing|version|way)s?\b/.test(t)
      || /\b(more|show me more)\b\s*$/.test(t.trim())) out.more=true;
@@ -1195,7 +1206,9 @@ function parse(text, st){
   else if(/\b(full chord|whole chord|chord|shape|voicing|grip)s?\b/.test(t)) out.view='chord';
 
   // which run of strings
-  if(/\btop\b/.test(t)) out.set=0;
+  if(out.set!==undefined){ /* already named by letters */ }
+  else if(/\btop\b/.test(t)) out.set=0;
+  else if(/\blower middle\b/.test(t)) out.set=2;
   else if(/\bmiddle\b/.test(t)) out.set=1;
   else if(/\b(bottom|low|bass)\s*(three|3)?\s*strings?\b/.test(t)) out.set=3;
   else if(/\ball\b.*\bstrings?\b|\bevery\b/.test(t)) out.set=null;
@@ -2466,7 +2479,7 @@ function buildTabs(){
 const CHIPSETS={
   // the pickers on each page cover note and type, so these are only extras
   chord:[['Up to fret 19','up to fret 19'],['Whole neck','whole neck']],
-  triad:[['All sets','all strings'],['Top strings','top strings'],['Middle','middle strings']],
+  triad:[['All sets','all strings'],['G B e','gbe strings'],['D G B','dgb strings'],['A D G','adg strings'],['E A D','ead strings']],
   scale:[['Whole neck','whole neck'],['Up to fret 19','up to fret 19']],
   key:[['Sevenths','sevenths'],['Triads','triads in key']],
   prog:[['Sevenths','sevenths'],['Triads','triads in key']],
